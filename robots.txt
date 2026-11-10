@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://tallercreativo.com.co/sitemap.xml
