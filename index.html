@@ -59,7 +59,7 @@
           </li>
           <li>
             <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2FA796"/><path d="M20 9l2.800 6 6.500.8-4.800 4.500 1.300 6.400L20 23.400 14.200 26.700l1.300-6.400-4.800-4.500 6.500-.8z" fill="#fff"/></svg>
-            Desde US$6 · COP $24.000
+            Desde COP $24.000 · US$6
           </li>
           <li>
             <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F26A1B"/><rect x="14" y="8" width="12" height="24" rx="3" fill="#fff"/><circle cx="20" cy="28" r="1.500" fill="#F26A1B"/></svg>
@@ -227,64 +227,102 @@
   <!-- PRECIOS -->
   <section class="section alt" id="planes">
     <div class="wrap">
-      <h2>Elige tu guía</h2>
-      <p class="sub">Precio por cantidad: mientras más guías llevas, menos pagas por cada una. Acceso inmediato tras el pago · Garantía de 7 días.</p>
+      <h2>Elige cómo quieres aprender</h2>
+      <p class="sub">Llévate un paquete con descuento o arma el tuyo con 1 o 2 guías. Acceso inmediato tras el pago · Garantía de 7 días.</p>
 
       <div class="currency" role="group" aria-label="Moneda">
-        <button type="button" data-cur="usd" aria-pressed="true">US$ Dólares</button>
-        <button type="button" data-cur="cop" aria-pressed="false">COP Pesos</button>
+        <button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button>
+        <button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button>
       </div>
 
-      <div class="buy-list">
-        <div class="buy-row">
-          <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 26l2-7L22 5l5 5L13 24z" fill="#FFC93C"/><path d="M6 26l2-7 5 5z" fill="#fff"/></svg></span>
-          <div class="buy-name"><b>Dibujo Desde Cero</b><span class="price" data-usd="US$6" data-cop="COP $24.000">US$6</span></div>
-          <a class="btn btn-sm" href="#contacto" data-buy="dibujo" data-title="Dibujo Desde Cero">Comprar</a>
-        </div>
-        <div class="buy-row">
-          <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4C8 4 3 10 3 16c0 6 5 11 11 11 3 0 3-2 3-3 0-2 1-3 3-3h4c4 0 6-3 6-6C30 9 24 4 16 4z" fill="#FFC93C"/></svg></span>
-          <div class="buy-name"><b>Pintura Desde Cero</b><span class="price" data-usd="US$6" data-cop="COP $24.000">US$6</span></div>
-          <a class="btn btn-sm" href="#contacto" data-buy="pintura" data-title="Pintura Desde Cero">Comprar</a>
-        </div>
-        <div class="buy-row">
-          <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="13" width="22" height="13" rx="5" fill="#6CCBBB"/><circle cx="12" cy="9" r="3" fill="#fff" opacity=".85"/></svg></span>
-          <div class="buy-name"><b>Jabones Artesanales</b><span class="price" data-usd="US$6" data-cop="COP $24.000">US$6</span></div>
-          <a class="btn btn-sm" href="#contacto" data-buy="jabones" data-title="Jabones Artesanales">Comprar</a>
-        </div>
-        <div class="buy-row">
-          <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c3 4 3 6 0 8-3-2-3-4 0-8z" fill="#FFE27A"/><rect x="9" y="13" width="14" height="14" rx="3" fill="#fff" opacity=".92"/></svg></span>
-          <div class="buy-name"><b>Velas Artesanales</b><span class="price" data-usd="US$6" data-cop="COP $24.000">US$6</span></div>
-          <a class="btn btn-sm" href="#contacto" data-buy="velas" data-title="Velas Artesanales">Comprar</a>
-        </div>
+      <h3 class="block-title">Paquetes con descuento</h3>
+      <div class="packs">
+        <article class="pack">
+          <div class="pack-ico">
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 26l2-7L22 5l5 5L13 24z" fill="#FFC93C"/><path d="M6 26l2-7 5 5z" fill="#fff"/></svg></span>
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4C8 4 3 10 3 16c0 6 5 11 11 11 3 0 3-2 3-3 0-2 1-3 3-3h4c4 0 6-3 6-6C30 9 24 4 16 4z" fill="#FFC93C"/></svg></span>
+          </div>
+          <h3>Dibujo + Pintura</h3>
+          <p class="pack-desc">Aprende a dibujar y a darle color a tus ideas.</p>
+          <div class="pack-price">
+            <b class="price" data-usd="US$7,50" data-cop="COP $29.900">COP $29.900</b>
+            <s class="price" data-usd="US$12" data-cop="COP $48.000">COP $48.000</s>
+          </div>
+          <p class="pack-save">Ahorras <span class="price" data-usd="US$4,50" data-cop="COP $18.100">COP $18.100</span></p>
+          <a class="btn btn-block" href="#contacto" data-buy="dibujo-pintura" data-title="el paquete Dibujo + Pintura">Comprar paquete</a>
+        </article>
+
+        <article class="pack">
+          <div class="pack-ico">
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="13" width="22" height="13" rx="5" fill="#6CCBBB"/><circle cx="12" cy="9" r="3" fill="#fff" opacity=".85"/></svg></span>
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c3 4 3 6 0 8-3-2-3-4 0-8z" fill="#FFE27A"/><rect x="9" y="13" width="14" height="14" rx="3" fill="#fff" opacity=".92"/></svg></span>
+          </div>
+          <h3>Jabones + Velas</h3>
+          <p class="pack-desc">Crea productos artesanales para regalar o vender.</p>
+          <div class="pack-price">
+            <b class="price" data-usd="US$7,50" data-cop="COP $29.900">COP $29.900</b>
+            <s class="price" data-usd="US$12" data-cop="COP $48.000">COP $48.000</s>
+          </div>
+          <p class="pack-save">Ahorras <span class="price" data-usd="US$4,50" data-cop="COP $18.100">COP $18.100</span></p>
+          <a class="btn btn-block" href="#contacto" data-buy="jabones-velas" data-title="el paquete Jabones + Velas">Comprar paquete</a>
+        </article>
+
+        <article class="pack featured">
+          <span class="badge-top">MEJOR PRECIO</span>
+          <div class="pack-ico">
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 26l2-7L22 5l5 5L13 24z" fill="#FFC93C"/></svg></span>
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4C8 4 3 10 3 16c0 6 5 11 11 11 3 0 3-2 3-3 0-2 1-3 3-3h4c4 0 6-3 6-6C30 9 24 4 16 4z" fill="#FFC93C"/></svg></span>
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="13" width="22" height="13" rx="5" fill="#6CCBBB"/></svg></span>
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c3 4 3 6 0 8-3-2-3-4 0-8z" fill="#FFE27A"/><rect x="9" y="13" width="14" height="14" rx="3" fill="#fff" opacity=".92"/></svg></span>
+          </div>
+          <h3>Paquete completo: las 4 guías</h3>
+          <p class="pack-desc">Dibujo, Pintura, Jabones y Velas, con todos los bonos y el certificado digital.</p>
+          <div class="pack-price">
+            <b class="price" data-usd="US$14" data-cop="COP $55.900">COP $55.900</b>
+            <s class="price" data-usd="US$24" data-cop="COP $96.000">COP $96.000</s>
+          </div>
+          <p class="pack-save">Ahorras <span class="price" data-usd="US$10" data-cop="COP $40.100">COP $40.100</span></p>
+          <a class="btn btn-block" href="#contacto" data-buy="paquete-completo" data-title="el paquete completo (las 4 guías)">Comprar el paquete completo</a>
+        </article>
       </div>
 
-      <h3 class="ladder-title">Mientras más lleves, menos pagas</h3>
-      <table class="ladder">
-        <thead><tr><th>Cantidad</th><th>Precio</th><th>Por guía</th></tr></thead>
-        <tbody>
-          <tr><td>1 guía</td><td><b class="price" data-usd="US$6" data-cop="COP $24.000">US$6</b></td><td class="price" data-usd="US$6,00" data-cop="COP $24.000">US$6,00</td></tr>
-          <tr><td>2 guías</td><td><b class="price" data-usd="US$9" data-cop="COP $36.000">US$9</b></td><td class="price" data-usd="US$4,50" data-cop="COP $18.000">US$4,50</td></tr>
-          <tr><td>3 guías</td><td><b class="price" data-usd="US$12" data-cop="COP $48.000">US$12</b></td><td class="price" data-usd="US$4,00" data-cop="COP $16.000">US$4,00</td></tr>
-          <tr class="best"><td>Las 4 guías</td><td><b class="price" data-usd="US$15" data-cop="COP $60.000">US$15</b></td><td class="price" data-usd="US$3,75" data-cop="COP $15.000">US$3,75</td></tr>
-        </tbody>
-      </table>
-      <p class="note">¿Quieres armar tu combo de 2 o 3 guías en particular? <a href="#contacto" data-wa="Hola, quiero armar un combo de 2 o 3 guías de la Academia Taller Creativo">Escríbenos por WhatsApp</a> y te lo dejamos listo a ese precio.</p>
-
-      <div class="bundle">
-        <span class="badge-top">MEJOR PRECIO</span>
-        <h3>Paquete completo: las 4 guías</h3>
-        <div class="bundle-price">
-          <b class="price" data-usd="US$15" data-cop="COP $60.000">US$15</b>
-          <s class="price" data-usd="US$24" data-cop="COP $96.000">US$24</s>
+      <h3 class="block-title">O arma el tuyo</h3>
+      <div class="builder">
+        <p class="builder-help">Elige <b>1 o 2 guías</b> a tu conveniencia.</p>
+        <div class="picks" id="picks">
+          <label class="pick">
+            <input type="checkbox" value="dibujo" data-title="Dibujo Desde Cero">
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 26l2-7L22 5l5 5L13 24z" fill="#FFC93C"/><path d="M6 26l2-7 5 5z" fill="#fff"/></svg></span>
+            <span class="pick-name"><b>Dibujo Desde Cero</b><span class="price" data-usd="US$6" data-cop="COP $24.000">COP $24.000</span></span>
+            <span class="pick-check" aria-hidden="true"></span>
+          </label>
+          <label class="pick">
+            <input type="checkbox" value="pintura" data-title="Pintura Desde Cero">
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4C8 4 3 10 3 16c0 6 5 11 11 11 3 0 3-2 3-3 0-2 1-3 3-3h4c4 0 6-3 6-6C30 9 24 4 16 4z" fill="#FFC93C"/></svg></span>
+            <span class="pick-name"><b>Pintura Desde Cero</b><span class="price" data-usd="US$6" data-cop="COP $24.000">COP $24.000</span></span>
+            <span class="pick-check" aria-hidden="true"></span>
+          </label>
+          <label class="pick">
+            <input type="checkbox" value="jabones" data-title="Jabones Artesanales">
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="13" width="22" height="13" rx="5" fill="#6CCBBB"/><circle cx="12" cy="9" r="3" fill="#fff" opacity=".85"/></svg></span>
+            <span class="pick-name"><b>Jabones Artesanales</b><span class="price" data-usd="US$6" data-cop="COP $24.000">COP $24.000</span></span>
+            <span class="pick-check" aria-hidden="true"></span>
+          </label>
+          <label class="pick">
+            <input type="checkbox" value="velas" data-title="Velas Artesanales">
+            <span class="cat-ico mini"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c3 4 3 6 0 8-3-2-3-4 0-8z" fill="#FFE27A"/><rect x="9" y="13" width="14" height="14" rx="3" fill="#fff" opacity=".92"/></svg></span>
+            <span class="pick-name"><b>Velas Artesanales</b><span class="price" data-usd="US$6" data-cop="COP $24.000">COP $24.000</span></span>
+            <span class="pick-check" aria-hidden="true"></span>
+          </label>
         </div>
-        <p class="bundle-save">Ahorras <span class="price" data-usd="US$9" data-cop="COP $36.000">US$9</span> reales</p>
-        <ul>
-          <li>Dibujo + Pintura + Jabones + Velas</li>
-          <li>Todos los bonos de cada guía</li>
-          <li>Certificado digital</li>
-        </ul>
-        <a class="btn btn-block" href="#contacto" data-buy="paquete-completo" data-title="el paquete completo (las 4 guías)">Comprar el paquete</a>
+        <div class="builder-total" aria-live="polite">
+          <span id="sel-text">Elige al menos una guía</span>
+          <b id="sel-price"></b>
+        </div>
+        <p class="builder-hint" id="sel-hint"></p>
+        <a class="btn btn-block is-disabled" id="build-buy" href="#planes" aria-disabled="true">Comprar mi selección</a>
       </div>
+      <p class="note">¿Quieres otra combinación? <a href="#contacto" data-wa="Hola, quiero armar un paquete a mi medida de la Academia Taller Creativo">Escríbenos por WhatsApp</a> y te ayudamos.</p>
     </div>
   </section>
 
@@ -366,52 +404,117 @@
   // ---- Configuración de ventas -------------------------------------------
   // Número de WhatsApp de la Academia (código de país, sin signos).
   var WHATSAPP = "573102454446";
-  // Enlaces de pago por guía. Mientras un enlace esté vacío, el botón
-  // "Comprar" abre WhatsApp con el pedido ya escrito.
+  // Enlaces de pago. Mientras un enlace esté vacío, el botón "Comprar" abre
+  // WhatsApp con el pedido ya escrito.
   var LINKS = {
-    usd: { dibujo: "", pintura: "", jabones: "", velas: "", "paquete-completo": "" },  // Gumroad
-    cop: { dibujo: "", pintura: "", jabones: "", velas: "", "paquete-completo": "" }   // Wompi
+    usd: { dibujo: "", pintura: "", jabones: "", velas: "", "dibujo-pintura": "", "jabones-velas": "", "paquete-completo": "" },  // Gumroad
+    cop: { dibujo: "", pintura: "", jabones: "", velas: "", "dibujo-pintura": "", "jabones-velas": "", "paquete-completo": "" }   // Wompi
   };
+  // Precios del selector "Arma el tuyo".
+  var PRICES = {
+    usd: { one: 6, two: 9, preset: 7.5 },
+    cop: { one: 24000, two: 36000, preset: 29900 }
+  };
+  // Parejas que ya son paquete con descuento.
+  var PRESETS = { "dibujo+pintura": "dibujo-pintura", "jabones+velas": "jabones-velas" };
   // -------------------------------------------------------------------------
 
   document.getElementById("year").textContent = new Date().getFullYear();
 
-  var currency = "usd";
+  var currency = "cop";
   try {
     var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (tz === "America/Bogota") currency = "cop";
+    currency = tz === "America/Bogota" ? "cop" : "usd";
     var saved = localStorage.getItem("tc_currency");
     if (saved === "usd" || saved === "cop") currency = saved;
   } catch (e) {}
 
+  function money(n) {
+    if (currency === "cop") return "COP $" + n.toLocaleString("es-CO");
+    return "US$" + (n % 1 ? n.toFixed(2).replace(".", ",") : n);
+  }
   function waLink(text) {
     return "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(text);
   }
 
-  function priceOf(el) { return el.getAttribute("data-" + currency); }
+  var picks = Array.prototype.slice.call(document.querySelectorAll("#picks input"));
+  var buildBtn = document.getElementById("build-buy");
+
+  function selection() {
+    return picks.filter(function (i) { return i.checked; });
+  }
+
+  function updateBuilder() {
+    var sel = selection();
+    var keys = sel.map(function (i) { return i.value; }).sort();
+    var titles = sel.map(function (i) { return i.getAttribute("data-title"); });
+    // Con 2 elegidas, el resto se bloquea.
+    picks.forEach(function (i) { i.disabled = sel.length >= 2 && !i.checked; i.parentNode.classList.toggle("is-off", i.disabled); });
+
+    var text = document.getElementById("sel-text");
+    var price = document.getElementById("sel-price");
+    var hint = document.getElementById("sel-hint");
+    var p = PRICES[currency];
+    var total = 0, linkKey = "", label = "";
+    hint.textContent = "";
+
+    if (sel.length === 0) {
+      text.textContent = "Elige al menos una guía";
+      price.textContent = "";
+      buildBtn.classList.add("is-disabled");
+      buildBtn.setAttribute("aria-disabled", "true");
+      buildBtn.href = "#planes";
+      buildBtn.removeAttribute("target");
+      return;
+    }
+    if (sel.length === 1) {
+      total = p.one; linkKey = keys[0]; label = titles[0];
+    } else {
+      var preset = PRESETS[keys.join("+")];
+      if (preset) {
+        total = p.preset; linkKey = preset;
+        hint.textContent = "¡Es nuestro paquete con descuento!";
+      } else {
+        total = p.two;
+        hint.textContent = "Tip: Dibujo + Pintura y Jabones + Velas cuestan " + money(p.preset) + " cada paquete.";
+      }
+      label = titles.join(" + ");
+    }
+    text.textContent = label;
+    price.textContent = money(total);
+    buildBtn.classList.remove("is-disabled");
+    buildBtn.removeAttribute("aria-disabled");
+    var url = LINKS[currency][linkKey];
+    buildBtn.href = url ? url : waLink("Hola, quiero comprar " + label + " (" + money(total) + ") de la Academia Taller Creativo");
+    buildBtn.target = "_blank";
+    buildBtn.rel = "noopener";
+  }
 
   function applyCurrency() {
     document.querySelectorAll(".currency button").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.getAttribute("data-cur") === currency));
     });
-    document.querySelectorAll("[data-usd]").forEach(function (el) { el.textContent = priceOf(el); });
+    document.querySelectorAll("[data-usd]").forEach(function (el) { el.textContent = el.getAttribute("data-" + currency); });
     document.querySelectorAll("[data-buy]").forEach(function (a) {
-      var key = a.getAttribute("data-buy");
-      var url = LINKS[currency][key];
+      var url = LINKS[currency][a.getAttribute("data-buy")];
       if (url) {
         a.href = url;
       } else {
-        var row = a.closest(".buy-row, .bundle");
-        var p = row && row.querySelector(".price");
-        var msg = "Hola, quiero comprar " + (a.getAttribute("data-title") || "una guía") +
-                  (p ? " (" + p.textContent + ")" : "") + " de la Academia Taller Creativo";
-        a.href = waLink(msg);
+        var card = a.closest(".pack");
+        var p = card && card.querySelector(".pack-price .price");
+        a.href = waLink("Hola, quiero comprar " + (a.getAttribute("data-title") || "una guía") +
+                        (p ? " (" + p.textContent + ")" : "") + " de la Academia Taller Creativo");
       }
       a.target = "_blank";
       a.rel = "noopener";
     });
+    updateBuilder();
   }
 
+  picks.forEach(function (i) { i.addEventListener("change", updateBuilder); });
+  buildBtn.addEventListener("click", function (e) {
+    if (buildBtn.getAttribute("aria-disabled") === "true") e.preventDefault();
+  });
   document.querySelectorAll(".currency button").forEach(function (b) {
     b.addEventListener("click", function () {
       currency = b.getAttribute("data-cur");
@@ -419,7 +522,6 @@
       applyCurrency();
     });
   });
-
   document.querySelectorAll("[data-wa]").forEach(function (a) {
     a.href = waLink(a.getAttribute("data-wa"));
     a.target = "_blank";
