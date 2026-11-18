@@ -258,6 +258,7 @@ def header(home):
       <span class="brand-text"><small>Academia</small><b>Taller Creativo</b></span>
     </a>
     <nav class="nav" aria-label="Principal">
+      <a href="{base}#medida">Tu taller</a>
       <a href="{base}#guias">Guías</a>
       <a href="{base}#paquetes">Paquetes</a>
       <a href="{base}#preguntas">Preguntas</a>
@@ -380,6 +381,7 @@ def build_index():
 <main id="inicio">
 
 {read('hero.html')}
+{read('medida.html')}
 {read('ps.html')}
   <!-- CATALOGO -->
   <section class="section" id="guias">

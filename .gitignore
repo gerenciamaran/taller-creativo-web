@@ -1,2 +1,5 @@
 .vercel
 .claude/
+.env.local
+supabase/.temp/
+supabase/.branches/
