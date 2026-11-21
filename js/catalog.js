@@ -14,6 +14,13 @@
   var TC = (window.TC = { courses: [], bundles: [], tiers: [], loaded: false });
   var esc = function (s) { var d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; };
   TC.esc = esc;
+  // Llamadas públicas (clave anon): funciones de la base (RPC) y funciones de borde. Responden { ok, data }.
+  function call(url, body) {
+    return fetch(url, { method: "POST", headers: { apikey: ANON, Authorization: "Bearer " + ANON, "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (data) { return { ok: r.ok, data: data }; }); });
+  }
+  TC.rpc = function (name, args) { return call(URL_BASE + "/rest/v1/rpc/" + name, args); };
+  TC.fn = function (name, body) { return call(URL_BASE + "/functions/v1/" + name, body); };
 
   // ---------- datos ----------
   function rest(path) {

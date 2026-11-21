@@ -22,3 +22,7 @@ content_path = "./supabase/templates/codigo.html"
 [storage]
 # Tamaño máximo por archivo en todo el proyecto (los videos de las lecciones). El bucket «videos» tiene su propio tope de 2 GB.
 file_size_limit = "2GiB"
+
+[functions.wompi-confirm]
+# La llama el navegador de quien compra (/gracias) y pg_cron; no revela secretos y solo actúa con lo que confirma Wompi.
+verify_jwt = false

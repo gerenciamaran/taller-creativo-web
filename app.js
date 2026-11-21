@@ -45,6 +45,36 @@
 
   function saveCart() { try { localStorage.setItem("tc_cart", JSON.stringify(cart)); } catch (e) {} }
 
+  // ---------- pago en línea con Wompi (pesos) -------------------------------
+  // El precio lo calcula y firma la base de datos (create_order); aquí solo se arma el enlace al checkout de Wompi.
+  // Se muestra si el administrador lo dejó activo (checkout_enabled). En dólares se sigue pidiendo por WhatsApp.
+  var SITE_ORIGIN = "https://tallercreativo.com.co";
+  var checkout = { enabled: false, busy: false };
+  var buyerEmail = "";
+  try { buyerEmail = localStorage.getItem("tc_email") || ""; } catch (e) {}
+  function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  if (window.TC && TC.rpc) TC.rpc("checkout_enabled").then(function (r) { checkout.enabled = !!(r.ok && r.data === true); render(); });
+
+  function startCheckout(keys, input, note, btn) {
+    var em = (input.value || "").trim().toLowerCase();
+    if (!validEmail(em)) { note.textContent = "Escribe un correo válido: ahí recibirás el acceso a tus guías."; note.className = "cart-note err"; input.focus(); return; }
+    buyerEmail = em;
+    try { localStorage.setItem("tc_email", em); } catch (e) {}
+    checkout.busy = true; btn.disabled = true; btn.textContent = "Preparando el pago…"; note.className = "cart-note";
+    TC.rpc("create_order", { p_email: em, p_slugs: keys }).then(function (r) {
+      if (!r.ok || !r.data || !r.data.reference) throw new Error((r.data && r.data.message) || "No pudimos preparar el pago.");
+      var d = r.data;
+      location.href = "https://checkout.wompi.co/p/?public-key=" + encodeURIComponent(d.public_key) + "&currency=" + encodeURIComponent(d.currency) +
+        "&amount-in-cents=" + encodeURIComponent(d.amount_in_cents) + "&reference=" + encodeURIComponent(d.reference) +
+        "&signature:integrity=" + encodeURIComponent(d.signature) + "&redirect-url=" + encodeURIComponent(SITE_ORIGIN + "/gracias?ref=" + d.reference) +
+        "&customer-data:email=" + encodeURIComponent(em);
+    }).catch(function (e) {
+      checkout.busy = false; render();
+      var n = drawer && drawer.querySelector(".cart-note");
+      if (n) { n.textContent = e.message || "No pudimos preparar el pago. Pídelo por WhatsApp."; n.className = "cart-note err"; }
+    });
+  }
+
   function money(n, cur) { return TC.money(n, cur || currency); }
   function waLink(text) { return "https://wa.me/" + CONFIG.whatsapp + "?text=" + encodeURIComponent(text); }
 
@@ -149,6 +179,23 @@
     box.innerHTML = "";
     var titles = keys.map(function (k) { return titleOf(k); }).join(" + ");
     var any = false;
+    var payNote = "";
+    if (checkout.enabled && currency === "cop") {
+      any = true;
+      var lab = document.createElement("label");
+      lab.className = "cart-email-label"; lab.textContent = "Tu correo (aquí recibes el acceso)";
+      var inp = document.createElement("input");
+      inp.type = "email"; inp.className = "cart-email"; inp.placeholder = "tucorreo@ejemplo.com"; inp.autocomplete = "email"; inp.inputMode = "email";
+      inp.value = buyerEmail;
+      inp.addEventListener("input", function () { buyerEmail = inp.value; });
+      var pay = document.createElement("button");
+      pay.type = "button"; pay.className = "btn btn-block";
+      pay.textContent = "Pagar con tarjeta, PSE o Nequi · " + money(total, "cop");
+      pay.disabled = checkout.busy;
+      pay.addEventListener("click", function () { startCheckout(keys, inp, drawer.querySelector(".cart-note"), pay); });
+      box.appendChild(lab); box.appendChild(inp); box.appendChild(pay);
+      payNote = "Pago seguro con Wompi. Recibes tu guía apenas se confirma el pago, en el correo que escribas.";
+    }
     PROVIDERS.forEach(function (pv) {
       var url = sku && CONFIG.links[pv.id] && CONFIG.links[pv.id][sku];
       if (!url) return;
@@ -165,9 +212,12 @@
     wa.target = "_blank"; wa.rel = "noopener";
     wa.textContent = any ? "Pedir por WhatsApp" : "Pedir por WhatsApp y pagar";
     box.appendChild(wa);
-    drawer.querySelector(".cart-note").textContent = any
+    var noteEl = drawer.querySelector(".cart-note");
+    noteEl.className = "cart-note";
+    noteEl.textContent = payNote || (any
       ? "Pago seguro. Recibes tu guía apenas se confirma el pago."
-      : "Te enviamos el enlace de pago por WhatsApp. Recibes tu guía apenas se confirma el pago.";
+      : (currency === "usd" ? "Los pagos en dólares se coordinan por WhatsApp. Recibes tu guía apenas se confirma el pago."
+        : "Te enviamos el enlace de pago por WhatsApp. Recibes tu guía apenas se confirma el pago."));
   }
 
 

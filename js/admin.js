@@ -59,10 +59,11 @@
     Array.prototype.forEach.call(tabs, function (t) {
       t.addEventListener("click", function () {
         Array.prototype.forEach.call(tabs, function (x) { var on = x === t; x.classList.toggle("on", on); x.setAttribute("aria-selected", String(on)); });
-        ["cursos", "precios", "alumnos"].forEach(function (n) { show($("tab-" + n), n === t.getAttribute("data-tab")); });
+        ["cursos", "precios", "ventas", "alumnos"].forEach(function (n) { show($("tab-" + n), n === t.getAttribute("data-tab")); });
         setMsg("");
         var which = t.getAttribute("data-tab");
         if (which === "precios") renderPricing();
+        else if (which === "ventas") renderSales();
         else if (which === "alumnos") renderStudents();
         else renderList();
       });
@@ -463,6 +464,58 @@
       setMsg(ed.status === "publicado" ? "Curso guardado y publicado. Ya se ve en la página." : "Curso guardado como borrador.", "ok");
       var slug = ed.slug;
       loadAll().then(function () { openEditor(slug); });
+    });
+  }
+
+  // =====================================================================
+  //  VENTAS (pagos en línea con Wompi)
+  // =====================================================================
+  var STATUS_LABEL = { APPROVED: "Pagado", PENDING: "Pendiente", DECLINED: "Rechazado", VOIDED: "Anulado", ERROR: "Error" };
+  function renderSales() {
+    var host = $("tab-ventas");
+    host.textContent = "Cargando…";
+    sb.from("orders").select("reference,email,slugs,amount_cents,status,created_at,paid_at,env").order("created_at", { ascending: false }).limit(100).then(function (r) {
+      host.textContent = "";
+      host.appendChild(el("div", { class: "panel-head" }, [
+        el("div", {}, [el("h2", { text: "Ventas" }), el("p", { class: "muted", text: "Pagos hechos con Wompi (pesos). Los pedidos de prueba no suman al total." })]),
+        btn("Actualizar", "btn-ghost", renderSales)
+      ]));
+      if (r.error) { host.appendChild(el("p", { class: "muted", text: "No se pudieron cargar las ventas: " + r.error.message })); return; }
+      var rows = r.data || [];
+      var titleBy = {};
+      courses.forEach(function (c) { titleBy[c.slug] = c.title; });
+      var real = rows.filter(function (o) { return o.status === "APPROVED" && o.env === "production"; });
+      var total = real.reduce(function (t, o) { return t + o.amount_cents / 100; }, 0);
+      host.appendChild(el("p", { class: "muted", text: real.length + " ventas aprobadas · " + money(total) + " COP (de los últimos 100 pedidos)." }));
+      if (!rows.length) {
+        host.appendChild(el("div", { class: "empty" }, [el("h2", { text: "Todavía no hay pedidos" }), el("p", { text: "Cuando alguien pague desde el carrito, aparecerá aquí." })]));
+        return;
+      }
+      rows.forEach(function (o) {
+        var paid = o.status === "APPROVED";
+        var when = new Date(o.paid_at || o.created_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+        var actions = [];
+        if (!paid) {
+          actions.push(btn("Revisar pago", "btn-ghost", function (ev) {
+            var b = ev.currentTarget; b.disabled = true; b.textContent = "Revisando…";
+            TC.fn("wompi-confirm", { reference: o.reference }).then(function (res) {
+              var st = res.data && res.data.status;
+              setMsg(st === "APPROVED" ? "Pago confirmado: el acceso ya quedó activo." : "Estado del pedido: " + (STATUS_LABEL[st] || st || "sin respuesta") + ".", st === "APPROVED" ? "ok" : "err");
+              renderSales();
+            });
+          }));
+        }
+        host.appendChild(el("article", { class: "ac" }, [
+          el("div", { class: "ac-body" }, [
+            el("div", { class: "ac-top" }, [
+              el("h3", { text: o.slugs.map(function (sl) { return titleBy[sl] || sl; }).join(" + ") }),
+              el("span", { class: "chip2 " + (paid ? "pub" : "draft"), text: (STATUS_LABEL[o.status] || o.status) + (o.env === "production" ? "" : " · prueba") })
+            ]),
+            el("p", { class: "muted", text: when + " · " + o.email + " · " + money(o.amount_cents / 100) + " COP · " + o.reference }),
+            actions.length ? el("div", { class: "vactions" }, actions) : null
+          ])
+        ]));
+      });
     });
   }
 

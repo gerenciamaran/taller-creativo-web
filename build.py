@@ -685,6 +685,25 @@ def zona_page(rel, path, title, page, main):
     write(rel, f"{h}{header(False)}\n{main}\n{CART}{foot}")
 
 
+def build_gracias():
+    """/gracias: a donde Wompi devuelve al comprador; js/gracias.js confirma el pago y muestra el resultado."""
+    h = head("Gracias por tu compra · Academia Taller Creativo", "Confirmación de pago de Academia Taller Creativo", "/gracias", '  <meta name="robots" content="noindex,nofollow">\n')
+    h = h.replace("<body>", '<body data-page="gracias">', 1)
+    foot = footer().replace("</body>", '<script src="/js/gracias.js"></script>\n</body>')
+    main = """<main class="zona">
+  <div class="wrap zona-narrow">
+    <div class="auth-card">
+      <h1 id="g-title">Confirmando tu pago…</h1>
+      <p class="lead-sm" id="g-lead">Estamos verificando tu pago con Wompi. No cierres esta página, tarda unos segundos.</p>
+      <ul class="learn" id="g-items" hidden></ul>
+      <div id="g-actions"></div>
+      <p class="foot-note" id="g-help" hidden></p>
+    </div>
+  </div>
+</main>"""
+    write("gracias.html", f"{h}{header(False)}\n{main}\n{CART}{foot}")
+
+
 def build_zona():
     zona_page("entrar.html", "/entrar", "Entrar · Zona de alumnos · Academia Taller Creativo", "entrar", """<main class="zona">
   <div class="wrap zona-narrow">
@@ -783,10 +802,12 @@ def build_zona():
       <nav class="tabs" role="tablist" aria-label="Secciones del panel">
         <button type="button" role="tab" class="tab on" data-tab="cursos" aria-selected="true">Cursos</button>
         <button type="button" role="tab" class="tab" data-tab="precios" aria-selected="false">Precios y paquetes</button>
+        <button type="button" role="tab" class="tab" data-tab="ventas" aria-selected="false">Ventas</button>
         <button type="button" role="tab" class="tab" data-tab="alumnos" aria-selected="false">Alumnos y accesos</button>
       </nav>
       <section id="tab-cursos"><div id="course-list"></div><div id="course-editor" hidden></div></section>
       <section id="tab-precios" hidden></section>
+      <section id="tab-ventas" hidden></section>
       <section id="tab-alumnos" hidden></section>
     </div>
   </div>
@@ -817,7 +838,7 @@ def build_seo():
         sm += f"  <url><loc>{SITE}{u}</loc>" + (f"<lastmod>{d}</lastmod>" if d else "") + "</url>\n"
     sm += "</urlset>\n"
     write("sitemap.xml", sm)
-    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /entrar\nDisallow: /mis-cursos\nDisallow: /curso\nDisallow: /admin\nSitemap: {SITE}/sitemap.xml\n")
+    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /entrar\nDisallow: /mis-cursos\nDisallow: /curso\nDisallow: /admin\nDisallow: /gracias\nSitemap: {SITE}/sitemap.xml\n")
 
 
 if __name__ == "__main__":
@@ -828,6 +849,7 @@ if __name__ == "__main__":
     build_index()
     build_guia_template()
     build_course_pages()
+    build_gracias()
     build_zona()
     build_seo()
     # Marca de la última construcción (no va a git): la lee el panel /admin y sirve para comprobar que Vercel la hizo.

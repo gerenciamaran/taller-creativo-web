@@ -137,6 +137,7 @@
       $("auth-switch").innerHTML = '¿Primera vez? <a href="/entrar?registro=1">Únete gratis</a>.';
     }
     var email = "", cooldown = 0, timer = null;
+    if (qs.get("email") && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(qs.get("email"))) $("email").value = qs.get("email");
     getSession().then(function (s) { if (s) location.replace(next); });
 
     function startCooldown() {
