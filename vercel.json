@@ -1,4 +1,6 @@
 {
+  "buildCommand": "PYTHONUTF8=1 python3 build.py --strict",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [

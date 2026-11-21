@@ -12,6 +12,7 @@
   var courses = [];          // lista para el panel (incluye borradores)
   var videoCount = {};       // curso → videos subidos
   var ed = null;             // curso que se está editando
+  var dirty = false;         // hubo cambios de cursos desde la última «Actualizar sitio»
 
   // ---------- utilidades ----------
   function slugify(t) {
@@ -80,6 +81,7 @@
       el("div", {}, [el("h2", { text: "Cursos" }), el("p", { class: "muted", text: "Lo que publiques aparece en la página y se puede vender. Los borradores solo los ves tú." })]),
       btn("+ Nuevo curso", "", function () { openEditor(null); })
     ]));
+    host.appendChild(siteCard());
     if (!courses.length) host.appendChild(el("div", { class: "empty" }, [el("h2", { text: "Todavía no hay cursos" }), el("p", { text: "Crea el primero con «Nuevo curso»." })]));
     courses.forEach(function (c) {
       var lessons = c.modules.reduce(function (t, m) { return t + m.lessons.length; }, 0);
@@ -89,6 +91,7 @@
       var toggle = btn(pub ? "Ocultar" : "Publicar", "btn-ghost", function () {
         sb.rpc("set_course_status", { p_slug: c.slug, p_status: pub ? "borrador" : "publicado" }).then(function (r) {
           if (r.error) return err(r.error);
+          dirty = true;
           setMsg(pub ? "«" + c.title + "» ya no se ve en la página." : "«" + c.title + "» ya está publicado en la página.", "ok");
           loadAll().then(renderList);
         });
@@ -104,6 +107,47 @@
         ])
       ]));
     });
+  }
+
+  // ---------- «Actualizar sitio» (regenera las páginas fijas que lee Google) ----------
+  function siteCard() {
+    var status = el("p", { class: "muted site-status", text: "Revisando…" });
+    var note = el("p", { class: "site-note" });
+    var b = btn("Actualizar sitio", "", null);
+    function paint() {
+      note.textContent = dirty ? "Hay cambios que todavía no están en las páginas fijas de Google. Pulsa «Actualizar sitio»." : "";
+      note.hidden = !dirty;
+    }
+    function loadStatus() {
+      sb.rpc("site_rebuild_status").then(function (r) {
+        var s = r.data;
+        if (r.error || !s) { status.textContent = ""; return; }
+        if (!s.configured) { status.textContent = "Todavía no está conectado el despliegue de Vercel: el botón no funcionará hasta guardar el enlace (ver el README)."; return; }
+        if (!s.requested_at) { status.textContent = "Todavía no se ha pedido ninguna actualización."; return; }
+        var when = new Date(s.requested_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+        var ok = s.status === null || (s.status >= 200 && s.status < 300);
+        status.textContent = "Última actualización pedida: " + when + (s.requested_by ? " (" + s.requested_by + ")" : "") + (ok ? "." : ". Vercel respondió con un error (" + s.status + "): revisa el enlace de despliegue.");
+      });
+    }
+    b.addEventListener("click", function () {
+      b.disabled = true; b.textContent = "Pidiendo…";
+      sb.rpc("request_site_rebuild").then(function (r) {
+        b.disabled = false; b.textContent = "Actualizar sitio";
+        if (r.error) return err(r.error);
+        dirty = false; paint();
+        setMsg("Listo: el sitio se está actualizando. En 1 o 2 minutos las páginas de los cursos ya estarán al día para Google.", "ok");
+        loadStatus();
+      });
+    });
+    paint();
+    loadStatus();
+    return el("section", { class: "panel inner site-card" }, [
+      el("div", { class: "panel-head" }, [
+        el("div", {}, [el("h3", { text: "Páginas para buscadores" }), el("p", { class: "muted", text: "Los cursos nuevos o cambiados ya se ven al instante en la página. Este botón además regenera las páginas fijas que lee Google (tarda 1 o 2 minutos). Úsalo después de publicar, ocultar o cambiar cursos." })]),
+        b
+      ]),
+      note, status
+    ]);
   }
 
   // =====================================================================
@@ -367,6 +411,7 @@
           var vp = ed.originalLessons.filter(function (x) { return x.video; }).map(function (x) { return x.video.video_path; });
           if (vp.length) sb.storage.from("videos").remove(vp);
           if (ed.coverPath) sb.storage.from("covers").remove([ed.coverPath]);
+          dirty = true;
           setMsg("Curso borrado.", "ok");
           loadAll().then(renderList);
         });
@@ -406,6 +451,7 @@
       if (r.error) return err(r.error);
       if (orphanVideos.length) sb.storage.from("videos").remove(orphanVideos);
       if (ed.oldCover && ed.oldCover !== ed.coverPath) sb.storage.from("covers").remove([ed.oldCover]);
+      dirty = true;
       setMsg(ed.status === "publicado" ? "Curso guardado y publicado. Ya se ve en la página." : "Curso guardado como borrador.", "ok");
       var slug = ed.slug;
       loadAll().then(function () { openEditor(slug); });

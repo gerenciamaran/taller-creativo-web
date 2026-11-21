@@ -661,3 +661,8 @@ textarea.fin { resize: vertical; }
   .ac { flex-direction: column; align-items: flex-start; }
   .ac-thumb { width: 100%; }
 }
+
+.site-card .btn { margin-top: 0; }
+.site-card .panel-head { margin-bottom: 8px; }
+.site-note { font-weight: 600; color: #B4540A; margin: 6px 0; }
+.site-status { font-size: .9rem; margin: 4px 0 0; }

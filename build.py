@@ -8,6 +8,7 @@ import html
 import json
 import os
 import re
+import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SITE = "https://tallercreativo.com.co"
@@ -820,6 +821,10 @@ def build_seo():
 
 
 if __name__ == "__main__":
+    # --strict (lo usa Vercel): si no se puede leer el catálogo de la base, la construcción falla y el sitio publicado
+    # no se toca, en vez de dejar la portada sin las tarjetas.
+    if "--strict" in sys.argv and not fetch_catalog()["ok"]:
+        sys.exit("ERROR: no se pudo leer el catálogo publicado de la base de datos; se cancela la construcción.")
     build_index()
     build_guia_template()
     build_course_pages()
