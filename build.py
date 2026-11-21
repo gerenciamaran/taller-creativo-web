@@ -830,4 +830,8 @@ if __name__ == "__main__":
     build_course_pages()
     build_zona()
     build_seo()
+    # Marca de la última construcción (no va a git): la lee el panel /admin y sirve para comprobar que Vercel la hizo.
+    import datetime
+    write("build-info.json", json.dumps({"built_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                         "courses": len(fetch_catalog()["courses"]), "by": "vercel" if os.environ.get("VERCEL") else "local"}))
     print("OK: index.html, guia.html, zona de alumnos, sitemap")

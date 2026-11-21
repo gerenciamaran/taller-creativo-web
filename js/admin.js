@@ -118,7 +118,15 @@
       note.textContent = dirty ? "Hay cambios que todavía no están en las páginas fijas de Google. Pulsa «Actualizar sitio»." : "";
       note.hidden = !dirty;
     }
+    var built = el("p", { class: "muted site-status" });
+    function loadBuilt() {
+      fetch("/build-info.json?_=" + Date.now()).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+        if (!j || !j.built_at) return;
+        built.textContent = "Páginas fijas generadas: " + new Date(j.built_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) + " · " + j.courses + " cursos publicados.";
+      }).catch(function () {});
+    }
     function loadStatus() {
+      loadBuilt();
       sb.rpc("site_rebuild_status").then(function (r) {
         var s = r.data;
         if (r.error || !s) { status.textContent = ""; return; }
@@ -146,7 +154,7 @@
         el("div", {}, [el("h3", { text: "Páginas para buscadores" }), el("p", { class: "muted", text: "Los cursos nuevos o cambiados ya se ven al instante en la página. Este botón además regenera las páginas fijas que lee Google (tarda 1 o 2 minutos). Úsalo después de publicar, ocultar o cambiar cursos." })]),
         b
       ]),
-      note, status
+      note, built, status
     ]);
   }
 
