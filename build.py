@@ -25,8 +25,8 @@ WA_SVG = '<svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true"><pa
 # Botones «Únete gratis», «Entrar» y «Mis cursos» del menú. Se muestran al público cuando el envío de correos con el
 # código sale por un SMTP propio en Supabase (el de fábrica solo envía a miembros de la organización y ~2 correos por
 # hora, así que los compradores no recibirían su código). Mientras tanto se entra por /entrar y /entrar?registro=1.
-# Cambia SHOW_JOIN a True y ejecuta `python build.py` para mostrarlos.
-SHOW_JOIN = False
+# SHOW_JOIN = True desde que el correo de códigos sale por Resend (SMTP propio en Supabase, 2026-11-21).
+SHOW_JOIN = True
 AUTH_BTNS = """<a class="btn btn-sm acct-join" href="/entrar?registro=1" data-auth="out">Únete gratis</a>
     <a class="acct-link" href="/entrar" data-auth="out">Entrar</a>
     <a class="btn btn-sm btn-ghost acct-my" href="/mis-cursos" data-auth="in" hidden>Mis cursos</a>"""
