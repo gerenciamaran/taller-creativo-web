@@ -7,6 +7,7 @@ Los textos de cada guía viven en COURSES; los bloques de la portada, en src/.
 import html
 import json
 import os
+import re
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SITE = "https://tallercreativo.com.co"
@@ -21,12 +22,14 @@ ICON = {
 }
 CART_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.6l2-8H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19.5" r="1.5" fill="currentColor"/><circle cx="17" cy="19.5" r="1.5" fill="currentColor"/></svg>'
 WA_SVG = '<svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11 19.8L3 29l6.4-2A13 13 0 1 0 16 3zm0 2.4a10.6 10.6 0 1 1-5.5 19.7l-.4-.2-3.8 1.2 1.2-3.7-.3-.4A10.6 10.6 0 0 1 16 5.4zm-4 5.3c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.3 2.6 4.1 6.4 5.6 3.2 1.2 3.8 1 4.5.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.4-.3-.8-.5s-2.2-1.1-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.3-2.1-2.7-.2-.4 0-.6.2-.8l.6-.7c.2-.2.2-.4.4-.6.1-.3.1-.5 0-.7l-1.1-2.7c-.3-.7-.6-.6-.8-.6z"/></svg>'
-# La zona de alumnos (/entrar, /mis-cursos, /curso, /admin) ya funciona. Este botón del menú se muestra al público
-# cuando termine de configurarse el envío de correos con el código (SMTP propio en Supabase); mientras tanto se
-# entra por la dirección directa. Cambia a True y ejecuta `python build.py` para mostrarlo.
-SHOW_ACCOUNT = False
-USER_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
-ACCT_BTN = f'<a class="cart-btn acct-btn" href="/mis-cursos" aria-label="Mis cursos (zona de alumnos)" title="Mis cursos">{USER_SVG}</a>'
+# Botones «Únete gratis», «Entrar» y «Mis cursos» del menú. Se muestran al público cuando el envío de correos con el
+# código sale por un SMTP propio en Supabase (el de fábrica solo envía a miembros de la organización y ~2 correos por
+# hora, así que los compradores no recibirían su código). Mientras tanto se entra por /entrar y /entrar?registro=1.
+# Cambia SHOW_JOIN a True y ejecuta `python build.py` para mostrarlos.
+SHOW_JOIN = False
+AUTH_BTNS = """<a class="btn btn-sm acct-join" href="/entrar?registro=1" data-auth="out">Únete gratis</a>
+    <a class="acct-link" href="/entrar" data-auth="out">Entrar</a>
+    <a class="btn btn-sm btn-ghost acct-my" href="/mis-cursos" data-auth="in" hidden>Mis cursos</a>"""
 LOGO = '<img src="/img/logo-marca.png" alt="" width="46" height="46" style="display:block">'
 
 # ---------------------------------------------------------------- guías -----
@@ -269,7 +272,7 @@ def header(home):
       <a href="{base}#paquetes">Paquetes</a>
       <a href="{base}#preguntas">Preguntas</a>
     </nav>
-    {ACCT_BTN if SHOW_ACCOUNT else ""}
+    {AUTH_BTNS if SHOW_JOIN else ""}
     <button type="button" class="cart-btn" data-open-cart aria-label="Abrir carrito">
       {CART_SVG}<span class="cart-count" data-cart-count hidden>0</span>
     </button>
@@ -318,6 +321,8 @@ def footer():
   <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11 19.8L3 29l6.4-2A13 13 0 1 0 16 3zm0 2.4a10.6 10.6 0 1 1-5.5 19.7l-.4-.2-3.8 1.2 1.2-3.7-.3-.4A10.6 10.6 0 0 1 16 5.4zm-4 5.3c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.3 2.6 4.1 6.4 5.6 3.2 1.2 3.8 1 4.5.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.4-.3-.8-.5s-2.2-1.1-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.3-2.1-2.7-.2-.4 0-.6.2-.8l.6-.7c.2-.2.2-.4.4-.6.1-.3.1-.5 0-.7l-1.1-2.7c-.3-.7-.6-.6-.8-.6z"/></svg>
 </a>
 
+<script src="/js/icons.js"></script>
+<script src="/js/catalog.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
@@ -337,49 +342,9 @@ def write(rel, text):
 
 
 # ---------------------------------------------------------------- portada ---
-def course_card(c):
-    return f"""
-        <article class="guia">
-          <a class="guia-top {c['grad']}" href="/guias/{c['slug']}" aria-label="Ver {e(c['title'])}">{ICON[c['slug']]}</a>
-          <div class="guia-body">
-            <span class="tag">{c['n_mod']} módulos · {c['n_les']} lecciones</span>
-            <h3><a href="/guias/{c['slug']}">{e(c['title'])}</a></h3>
-            <p>{e(c['short'])}</p>
-            <ul>{''.join(f'<li>{e(b)}</li>' for b in c['bullets'])}</ul>
-            <div class="guia-foot">
-              {price('one', 'b', 'price big')}
-              <div class="guia-actions">
-                <a class="btn btn-sm btn-ghost" href="/guias/{c['slug']}">Ver guía</a>
-                <button type="button" class="btn btn-sm" data-add="{c['slug']}" data-label="Agregar"><span class="lbl">Agregar</span></button>
-              </div>
-            </div>
-          </div>
-        </article>"""
-
-
-def pack_card(title, desc, slugs, key, old, save, featured=False):
-    icons = "".join(f'<span class="cat-ico mini">{ICON[s]}</span>' for s in slugs)
-    badge = '<span class="badge-top">MEJOR PRECIO</span>' if featured else ""
-    return f"""
-        <article class="pack{' featured' if featured else ''}">
-          {badge}
-          <div class="pack-ico">{icons}</div>
-          <h3>{title}</h3>
-          <p class="pack-desc">{desc}</p>
-          <div class="pack-price">{price(key, 'b')}{price(old, 's')}</div>
-          <p class="pack-save">Ahorras {price(save)}</p>
-          <button type="button" class="btn btn-block" data-add-pack="{','.join(slugs)}">Agregar al carrito</button>
-        </article>"""
-
-
 def build_index():
-    cards = "".join(course_card(c) for c in COURSES)
-    packs = (
-        pack_card("Dibujo + Pintura", "Aprende a dibujar y a darle color a tus ideas.", ["dibujo", "pintura"], "preset", "preset_old", "preset_save")
-        + pack_card("Jabones + Velas", "Crea productos artesanales para regalar o vender.", ["jabones", "velas"], "preset", "preset_old", "preset_save")
-        + pack_card("Paquete completo: las 4 guías", "Dibujo, Pintura, Jabones y Velas, con todos los bonos y el certificado digital.",
-                    ["dibujo", "pintura", "jabones", "velas"], "four", "four_old", "four_save", featured=True)
-    )
+    cards = '\n        <p class="note" id="guias-loading">Cargando las guías…</p><noscript><p class="note">Activa JavaScript para ver el catálogo de guías.</p></noscript>'
+    packs = ""
     desc = "Guías digitales en PDF, paso a paso y desde cero: dibujo, pintura, jabones y velas artesanales. Desde COP $24.000. Acceso inmediato y garantía de 7 días."
     ld = json.dumps({"@context": "https://schema.org", "@type": "Organization", "name": "Academia Taller Creativo",
                      "url": SITE, "logo": SITE + "/img/logo-marca.png"}, ensure_ascii=False)
@@ -399,14 +364,14 @@ def build_index():
         <button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button>
         <button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button>
       </div>
-      <div class="guias">{cards}
+      <div class="guias" id="guias-grid">{cards}
       </div>
       <h3 class="chips-title">Cada guía incluye</h3>
       <div class="bonus-strip">
         <span>Guía de materiales</span><span>Ejercicios extra por módulo</span><span>Plantillas de trabajo imprimibles</span>
         <span>Guía de costos y precio de venta</span><span>Banco de referencias</span><span>Certificado digital</span>
       </div>
-      <p class="note">Hoy las guías se entregan en PDF. Los videos todavía no están grabados; cuando existan, quien ya compró los recibe sin costo extra.</p>
+      <p class="note">Las guías se entregan en PDF y, cuando una lección tiene video, lo ves en tu zona de alumnos. Los videos nuevos de una guía que ya compraste son sin costo extra.</p>
     </div>
   </section>
 
@@ -415,7 +380,7 @@ def build_index():
     <div class="wrap">
       <h2>Paquetes con descuento</h2>
       <p class="sub">Llévate más guías y paga menos por cada una. También puedes armar tu propio paquete: agrega al carrito las guías que quieras.</p>
-      <div class="packs">{packs}
+      <div class="packs" id="packs-grid">{packs}
       </div>
       <p class="note">¿Quieres otra combinación? <a href="#" data-wa="Hola, quiero armar un paquete a mi medida de la Academia Taller Creativo">Escríbenos por WhatsApp</a> y te ayudamos.</p>
     </div>
@@ -439,7 +404,7 @@ def build_index():
     <div class="wrap cta-in">
       <h2>Quiero aprender y crear</h2>
       <p>Tu primer dibujo, tu primer cuadro, tu primer jabón y tu primera vela están a una guía de distancia.</p>
-      <a class="btn btn-light" href="#guias">Ver las guías</a>
+      <a class="btn btn-light" href="#guias">Ver las guías</a>{' <a class="btn btn-light" href="/entrar?registro=1">Únete gratis</a>' if SHOW_JOIN else ''}
       <p class="cta-wa"><a href="#" data-wa="Hola, quiero información de la Academia Taller Creativo">¿Dudas? Escríbenos por WhatsApp</a></p>
     </div>
   </section>
@@ -449,144 +414,37 @@ def build_index():
 
 
 # ------------------------------------------------------------ página guía ---
-def build_course(c):
-    others = [o for o in COURSES if o["slug"] != c["slug"]]
-    mods = ""
-    for i, (name, lessons) in enumerate(c["modules"], 1):
-        items = "".join(
-            f'<li><span class="les-name">{e(t)}</span><span class="les-do"><b>Ejercicio:</b> {e(p)}</span></li>' for t, p in lessons)
-        mods += f"""
-        <details class="mod"{' open' if i == 1 else ''}>
-          <summary><span class="mod-num">{i}</span><span class="mod-title">{e(name)}</span><span class="mod-count">{len(lessons)} lecciones</span></summary>
-          <ul class="lessons">{items}</ul>
-        </details>"""
-    more = "".join(f"""
-        <a class="more-card" href="/guias/{o['slug']}">
-          <span class="more-top {o['grad']}">{ICON[o['slug']]}</span>
-          <span class="more-body"><b>{e(o['title'])}</b><span class="price" data-usd="{P['one'][0]}" data-cop="{P['one'][1]}">{P['one'][1]}</span></span>
-        </a>""" for o in others)
-    title = f"{c['title']} · Guía en PDF · Academia Taller Creativo"
-    desc = f"{c['promise']} {c['n_mod']} módulos, {c['n_les']} lecciones. Desde COP $24.000. Acceso inmediato y garantía de 7 días."
-    ld = json.dumps({
-        "@context": "https://schema.org", "@type": "Product", "name": f"{c['title']} · Academia Taller Creativo",
-        "description": c["promise"], "brand": {"@type": "Brand", "name": "Academia Taller Creativo"},
-        "image": SITE + "/img/logo-completo.png",
-        "offers": {"@type": "Offer", "priceCurrency": "COP", "price": "24000", "availability": "https://schema.org/InStock",
-                   "url": f"{SITE}/guias/{c['slug']}"}}, ensure_ascii=False)
-    body = f"""{head(title, desc, f"/guias/{c['slug']}", f'  <script type="application/ld+json">{ld}</script>\n')}
+def build_guia_template():
+    """guia.html: plantilla única de todos los cursos (/guias/<curso>). js/catalog.js la llena con lo publicado."""
+    title = "Guía en PDF · Academia Taller Creativo"
+    desc = "Guía digital en PDF, paso a paso y desde cero. Acceso inmediato y garantía de 7 días."
+    body = f"""{head(title, desc, "/guias", "")}
 {header(False)}
-<main>
-  <section class="chero">
-    <div class="wrap chero-in">
-      <div class="chero-copy">
-        <p class="crumbs"><a href="/">Inicio</a> › <a href="/#guias">Guías</a> › {e(c['cat'])}</p>
-        <span class="pill">Guía en PDF · {c['n_mod']} módulos · {c['n_les']} lecciones</span>
-        <h1>{e(c['title'])}</h1>
-        <p class="lead">{e(c['promise'])}</p>
-        <p class="who"><b>¿Para quién es?</b> {e(c['who'])}</p>
-        <ul class="ticks">
-          <li>Paso a paso, sin experiencia previa</li>
-          <li>Ejercicio práctico al final de cada lección</li>
-          <li>Acceso inmediato tras el pago · Garantía de 7 días</li>
-        </ul>
-      </div>
-      <aside class="buybox">
-        <div class="buybox-cover {c['grad']}">{ICON[c['slug']]}</div>
-        <div class="currency small" role="group" aria-label="Moneda">
-          <button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button>
-          <button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button>
-        </div>
-        <div class="buybox-price">{price('one', 'b')}<span>Acceso de por vida</span></div>
-        <button type="button" class="btn btn-block" data-add="{c['slug']}" data-label="Agregar al carrito"><span class="lbl">Agregar al carrito</span></button>
-        <p class="buybox-deal">Con 2 guías pagas desde {price('preset')} el paquete. <a href="/#paquetes">Ver paquetes</a></p>
-        <ul class="buybox-list">
-          <li>Guía completa en PDF</li>
-          <li>Plantillas y ejercicios extra</li>
-          <li>Certificado digital</li>
-          <li>Garantía de 7 días</li>
-        </ul>
-      </aside>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="wrap two-col">
-      <div>
-        <h2 class="left">Lo que aprenderás</h2>
-        <ul class="learn">{''.join(f'<li>{e(x)}</li>' for x in c['learn'])}</ul>
-
-        <h2 class="left">Contenido de la guía</h2>
-        <p class="sub left">{c['n_mod']} módulos · {c['n_les']} lecciones, cada una con su ejercicio.</p>
-        <div class="mods">{mods}
-        </div>
-      </div>
-      <div class="side">
-        <div class="side-card">
-          <h3>Qué incluye</h3>
-          <ul class="checks-sm">{''.join(f'<li>{e(x)}</li>' for x in c['extras'])}</ul>
-        </div>
-        <div class="side-card">
-          <h3>Para empezar necesitas</h3>
-          <ul class="checks-sm">{''.join(f'<li>{e(x)}</li>' for x in c['kit'])}</ul>
-          <p class="mini">La guía te dice qué comprar según tu presupuesto. No necesitas experiencia previa.</p>
-        </div>
-        <div class="side-card soft">
-          <h3>Entrega</h3>
-          <p>Hoy la guía es un PDF que recibes apenas se confirma el pago. Los videos todavía no están grabados; cuando existan, quien ya compró los recibe sin costo extra.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+<main id="course-root"><section class="section"><div class="wrap"><p class="note">Cargando la guía…</p></div></section></main>
+<template id="course-static">
 {read('garantia.html')}
 {read('faq.html')}
-  <section class="section">
-    <div class="wrap">
-      <h2>También te puede interesar</h2>
-      <div class="more">{more}
-      </div>
-    </div>
-  </section>
-</main>
-
-<div class="buybar">
-  <div class="buybar-in">
-    <div class="buybar-price"><small>{e(c['title'])}</small>{price('one', 'b')}</div>
-    <button type="button" class="btn" data-add="{c['slug']}" data-label="Agregar"><span class="lbl">Agregar</span></button>
-  </div>
-</div>
+</template>
 {CART}{footer()}"""
-    write(f"guias/{c['slug']}.html", body)
+    write("guia.html", body)
 
 
 # ----------------------------------------------------------- zona alumnos ---
-def build_cursos_js():
-    """Contenido de las guías (módulos y lecciones) que usa el lector de la zona de alumnos."""
-    data = {}
-    for c in COURSES:
-        data[c["slug"]] = {
-            "title": c["title"], "grad": c["grad"], "icon": ICON[c["slug"]], "cat": c["cat"],
-            "cover": f"/img/curso-{c['slug']}.jpg" if os.path.exists(os.path.join(ROOT, "img", f"curso-{c['slug']}.jpg")) else "",
-            "modules": [{"title": name, "lessons": [{"t": t, "e": p} for t, p in lessons]} for name, lessons in c["modules"]],
-        }
-    write("js/cursos.js", "window.TC_COURSES = " + json.dumps(data, ensure_ascii=False) + ";\n")
-
-
 def zona_page(rel, path, title, page, main):
     """Página de la zona de alumnos: sin indexar, con los scripts de Supabase y de la zona."""
     h = head(title, "Zona de alumnos de Academia Taller Creativo", path, '  <meta name="robots" content="noindex,nofollow">\n')
     h = h.replace("<body>", f'<body data-page="{page}">', 1)
-    scripts = '<script src="/js/supabase.js"></script>\n<script src="/js/cursos.js"></script>\n<script src="/js/zona.js"></script>\n'
+    scripts = '<script src="/js/supabase.js"></script>\n<script src="/js/icons.js"></script>\n<script src="/js/zona.js"></script>\n' + ('<script src="/js/admin.js"></script>\n' if page == "admin" else "")
     foot = footer().replace("</body>", scripts + "</body>")
     write(rel, f"{h}{header(False)}\n{main}\n{CART}{foot}")
 
 
 def build_zona():
-    build_cursos_js()
     zona_page("entrar.html", "/entrar", "Entrar · Zona de alumnos · Academia Taller Creativo", "entrar", """<main class="zona">
   <div class="wrap zona-narrow">
     <div class="auth-card">
-      <h1>Entra a tu zona de alumnos</h1>
-      <p class="lead-sm">Escribe el correo con el que compraste. Te enviamos un código de 6 dígitos y entras sin contraseña.</p>
+      <h1 id="auth-title">Entra a tu zona de alumnos</h1>
+      <p class="lead-sm" id="auth-lead">Escribe tu correo. Te enviamos un código de 6 dígitos y entras sin contraseña.</p>
       <form id="form-email" novalidate>
         <label for="email">Tu correo</label>
         <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="tucorreo@ejemplo.com" required>
@@ -600,7 +458,8 @@ def build_zona():
         <p class="links"><button type="button" id="resend" class="linkbtn" disabled>Reenviar código</button> · <button type="button" id="change-email" class="linkbtn">Cambiar correo</button></p>
       </form>
       <p class="msg" id="msg" role="alert" hidden></p>
-      <p class="foot-note">¿Aún no tienes guías? <a href="/#guias">Míralas aquí</a>. ¿Ya pagaste y no ves tus guías? <a href="#" data-wa="Hola, ya pagué y necesito acceso a mis guías. Mi correo es:">Escríbenos</a>.</p>
+      <p class="foot-note" id="auth-switch"></p>
+      <p class="foot-note">¿Ya pagaste y no ves tus guías? <a href="#" data-wa="Hola, ya pagué y necesito acceso a mis guías. Mi correo es:">Escríbenos</a>.</p>
     </div>
   </div>
 </main>""")
@@ -625,8 +484,8 @@ def build_zona():
     <p id="loading" class="muted">Cargando tus guías…</p>
     <div id="courses" class="mycourses"></div>
     <div id="empty" class="empty" hidden>
-      <h2>Todavía no tienes guías en esta cuenta</h2>
-      <p>Cuando compres una guía, aparecerá aquí con el correo que usaste para entrar. Si ya pagaste y no la ves, escríbenos con tu comprobante.</p>
+      <h2>¡Te damos la bienvenida! Tu cuenta ya está lista</h2>
+      <p>Cuando compres una guía, aparecerá aquí con el correo que usaste para entrar. Mientras tanto, mira las guías disponibles. Si ya pagaste y no la ves, escríbenos con tu comprobante.</p>
       <p><a class="btn" href="/#guias">Ver las guías</a> <a class="btn btn-ghost" href="#" data-wa="Hola, ya pagué y no veo mi guía en Mis cursos. Mi correo es:">Escribirnos por WhatsApp</a></p>
     </div>
   </div>
@@ -665,48 +524,45 @@ def build_zona():
     </div>
   </div>
 </main>""")
-    zona_page("admin.html", "/admin", "Administrar alumnos · Academia Taller Creativo", "admin", """<main class="zona">
+    zona_page("admin.html", "/admin", "Panel de administración · Academia Taller Creativo", "admin", """<main class="zona">
   <div class="wrap">
     <div class="zona-head">
-      <div><p class="crumbs">Zona de alumnos</p><h1>Administrar alumnos</h1></div>
+      <div><p class="crumbs">Academia Taller Creativo</p><h1>Panel de administración</h1></div>
       <div class="zona-actions"><a class="btn btn-sm btn-ghost" href="/mis-cursos">Mis cursos</a><button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button></div>
     </div>
     <p class="msg" id="msg" role="alert" hidden></p>
     <p id="loading" class="muted">Cargando…</p>
-    <div id="denied" class="empty" hidden><h2>No tienes permiso para esta página</h2><p>Solo la administración de la Academia puede dar acceso a las guías.</p></div>
+    <div id="denied" class="empty" hidden><h2>No tienes permiso para esta página</h2><p>Solo la administración de la Academia puede entrar aquí.</p></div>
     <div id="admin" hidden>
-      <section class="panel">
-        <h2>Dar acceso a una guía</h2>
-        <p class="muted">Úsalo cuando alguien pague por WhatsApp o por otro medio. Entra con ese correo y verá sus guías al instante.</p>
-        <form id="form-grant" novalidate>
-          <label for="g-email">Correo del alumno</label>
-          <input id="g-email" type="email" inputmode="email" placeholder="alumno@ejemplo.com" required>
-          <fieldset><legend>Guías <button type="button" id="all4" class="linkbtn">Marcar las 4</button></legend><div id="slugs" class="chks"></div></fieldset>
-          <div class="row2">
-            <div><label for="g-source">¿Cómo pagó?</label><select id="g-source"><option value="whatsapp">WhatsApp</option><option value="manual">Otro medio</option></select></div>
-            <div><label for="g-note">Nota (opcional)</label><input id="g-note" type="text" maxlength="300" placeholder="Ej. Nequi, 24 nov"></div>
-          </div>
-          <button class="btn" type="submit">Dar acceso</button>
-        </form>
-      </section>
-      <section class="panel" id="videos-panel">
-        <h2>Videos de las lecciones</h2>
-        <p class="muted">Sube el video de cada lección (MP4, WebM o MOV, hasta 2 GB; lo ideal es MP4 en 720p). Los alumnos que tienen la guía lo ven dentro de la lección.</p>
-        <label for="v-slug">Guía</label>
-        <select id="v-slug"></select>
-        <div id="v-list"></div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h2>Alumnos con acceso <span class="muted" id="count"></span></h2><input id="filter" type="search" placeholder="Buscar por correo" aria-label="Buscar por correo"></div>
-        <div id="list"></div>
-      </section>
+      <nav class="tabs" role="tablist" aria-label="Secciones del panel">
+        <button type="button" role="tab" class="tab on" data-tab="cursos" aria-selected="true">Cursos</button>
+        <button type="button" role="tab" class="tab" data-tab="precios" aria-selected="false">Precios y paquetes</button>
+        <button type="button" role="tab" class="tab" data-tab="alumnos" aria-selected="false">Alumnos y accesos</button>
+      </nav>
+      <section id="tab-cursos"><div id="course-list"></div><div id="course-editor" hidden></div></section>
+      <section id="tab-precios" hidden></section>
+      <section id="tab-alumnos" hidden></section>
     </div>
   </div>
 </main>""")
 
 
+def published_slugs():
+    """Cursos publicados, leídos de la base de datos (lectura pública). Si no responde, se usan los 4 de la semilla."""
+    import urllib.request
+    try:
+        env = open(os.path.join(ROOT, "js", "catalog.js"), encoding="utf-8").read()
+        url = re.search(r'URL_BASE = "([^"]+)"', env).group(1)
+        key = re.search(r'ANON = "([^"]+)"', env).group(1)
+        req = urllib.request.Request(url + "/rest/v1/courses?select=slug&status=eq.publicado&order=sort_order.asc", headers={"apikey": key, "Authorization": "Bearer " + key})
+        return [r["slug"] for r in json.loads(urllib.request.urlopen(req, timeout=15).read())]
+    except Exception:
+        return [c["slug"] for c in COURSES]
+
+
 def build_seo():
-    urls = ["/"] + [f"/guias/{c['slug']}" for c in COURSES]
+    slugs = published_slugs()
+    urls = ["/"] + [f"/guias/{x}" for x in slugs]
     sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     sm += "".join(f"  <url><loc>{SITE}{u}</loc></url>\n" for u in urls) + "</urlset>\n"
     write("sitemap.xml", sm)
@@ -715,8 +571,7 @@ def build_seo():
 
 if __name__ == "__main__":
     build_index()
-    for course in COURSES:
-        build_course(course)
+    build_guia_template()
     build_zona()
     build_seo()
-    print("OK:", ["index.html"] + [f"guias/{c['slug']}.html" for c in COURSES])
+    print("OK: index.html, guia.html, zona de alumnos, sitemap")

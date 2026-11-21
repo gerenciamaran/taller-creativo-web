@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Administrar alumnos · Academia Taller Creativo</title>
+  <title>Panel de administración · Academia Taller Creativo</title>
   <meta name="description" content="Zona de alumnos de Academia Taller Creativo">
   <link rel="canonical" href="https://tallercreativo.com.co/admin">
-  <meta property="og:title" content="Administrar alumnos · Academia Taller Creativo">
+  <meta property="og:title" content="Panel de administración · Academia Taller Creativo">
   <meta property="og:description" content="Zona de alumnos de Academia Taller Creativo">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://tallercreativo.com.co/admin">
@@ -44,38 +44,21 @@
 <main class="zona">
   <div class="wrap">
     <div class="zona-head">
-      <div><p class="crumbs">Zona de alumnos</p><h1>Administrar alumnos</h1></div>
+      <div><p class="crumbs">Academia Taller Creativo</p><h1>Panel de administración</h1></div>
       <div class="zona-actions"><a class="btn btn-sm btn-ghost" href="/mis-cursos">Mis cursos</a><button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button></div>
     </div>
     <p class="msg" id="msg" role="alert" hidden></p>
     <p id="loading" class="muted">Cargando…</p>
-    <div id="denied" class="empty" hidden><h2>No tienes permiso para esta página</h2><p>Solo la administración de la Academia puede dar acceso a las guías.</p></div>
+    <div id="denied" class="empty" hidden><h2>No tienes permiso para esta página</h2><p>Solo la administración de la Academia puede entrar aquí.</p></div>
     <div id="admin" hidden>
-      <section class="panel">
-        <h2>Dar acceso a una guía</h2>
-        <p class="muted">Úsalo cuando alguien pague por WhatsApp o por otro medio. Entra con ese correo y verá sus guías al instante.</p>
-        <form id="form-grant" novalidate>
-          <label for="g-email">Correo del alumno</label>
-          <input id="g-email" type="email" inputmode="email" placeholder="alumno@ejemplo.com" required>
-          <fieldset><legend>Guías <button type="button" id="all4" class="linkbtn">Marcar las 4</button></legend><div id="slugs" class="chks"></div></fieldset>
-          <div class="row2">
-            <div><label for="g-source">¿Cómo pagó?</label><select id="g-source"><option value="whatsapp">WhatsApp</option><option value="manual">Otro medio</option></select></div>
-            <div><label for="g-note">Nota (opcional)</label><input id="g-note" type="text" maxlength="300" placeholder="Ej. Nequi, 24 nov"></div>
-          </div>
-          <button class="btn" type="submit">Dar acceso</button>
-        </form>
-      </section>
-      <section class="panel" id="videos-panel">
-        <h2>Videos de las lecciones</h2>
-        <p class="muted">Sube el video de cada lección (MP4, WebM o MOV, hasta 2 GB; lo ideal es MP4 en 720p). Los alumnos que tienen la guía lo ven dentro de la lección.</p>
-        <label for="v-slug">Guía</label>
-        <select id="v-slug"></select>
-        <div id="v-list"></div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h2>Alumnos con acceso <span class="muted" id="count"></span></h2><input id="filter" type="search" placeholder="Buscar por correo" aria-label="Buscar por correo"></div>
-        <div id="list"></div>
-      </section>
+      <nav class="tabs" role="tablist" aria-label="Secciones del panel">
+        <button type="button" role="tab" class="tab on" data-tab="cursos" aria-selected="true">Cursos</button>
+        <button type="button" role="tab" class="tab" data-tab="precios" aria-selected="false">Precios y paquetes</button>
+        <button type="button" role="tab" class="tab" data-tab="alumnos" aria-selected="false">Alumnos y accesos</button>
+      </nav>
+      <section id="tab-cursos"><div id="course-list"></div><div id="course-editor" hidden></div></section>
+      <section id="tab-precios" hidden></section>
+      <section id="tab-alumnos" hidden></section>
     </div>
   </div>
 </main>
@@ -114,9 +97,12 @@
   <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11 19.8L3 29l6.4-2A13 13 0 1 0 16 3zm0 2.4a10.6 10.6 0 1 1-5.5 19.7l-.4-.2-3.8 1.2 1.2-3.7-.3-.4A10.6 10.6 0 0 1 16 5.4zm-4 5.3c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.3 2.6 4.1 6.4 5.6 3.2 1.2 3.8 1 4.5.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.4-.3-.8-.5s-2.2-1.1-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.3-2.1-2.7-.2-.4 0-.6.2-.8l.6-.7c.2-.2.2-.4.4-.6.1-.3.1-.5 0-.7l-1.1-2.7c-.3-.7-.6-.6-.8-.6z"/></svg>
 </a>
 
+<script src="/js/icons.js"></script>
+<script src="/js/catalog.js"></script>
 <script src="/app.js"></script>
 <script src="/js/supabase.js"></script>
-<script src="/js/cursos.js"></script>
+<script src="/js/icons.js"></script>
 <script src="/js/zona.js"></script>
+<script src="/js/admin.js"></script>
 </body>
 </html>

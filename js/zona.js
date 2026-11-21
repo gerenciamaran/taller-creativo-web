@@ -7,8 +7,8 @@
 
   var SUPABASE_URL = "https://kpseadjekdezqwjjflfg.supabase.co";
   var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwc2VhZGpla2RlenF3ampmbGZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyMjAyNjYsImV4cCI6MjExMDc5NjI2Nn0.TG164PGiIUeUWEtUT6wLJbpDPwWI1yeqB9toYwmAayc";
-  var COURSES = window.TC_COURSES || {};
-  var SLUGS = Object.keys(COURSES);
+  var COURSES = {};
+  var SLUGS = [];
 
   if (!window.supabase || !window.supabase.createClient) return;
   var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -43,6 +43,8 @@
     var status = err && err.status;
     if (status === 429 || t.indexOf("rate limit") !== -1 || t.indexOf("security purposes") !== -1)
       return "Pediste muchos códigos seguidos. Espera unos minutos e inténtalo de nuevo, o escríbenos por WhatsApp.";
+    if (t.indexOf("not authorized") !== -1 || t.indexOf("not allowed") !== -1)
+      return "Por ahora no podemos enviar el código a ese correo. Escríbenos por WhatsApp y te ayudamos a entrar.";
     if (t.indexOf("expired") !== -1 || t.indexOf("invalid") !== -1) return "El código no es correcto o ya venció. Revisa el correo o pide uno nuevo.";
     if (t.indexOf("network") !== -1 || t.indexOf("fetch") !== -1) return "No hay conexión. Revisa tu internet e inténtalo de nuevo.";
     return (err && err.message) || "Algo salió mal. Inténtalo de nuevo.";
@@ -92,11 +94,48 @@
     });
   }
   function waLink(text) { return "https://wa.me/573102454446?text=" + encodeURIComponent(text); }
+  function coverUrl(path) { return path ? SUPABASE_URL + "/storage/v1/object/public/covers/" + encodeURI(path) : ""; }
+  function byPos(a, b) { return a.position - b.position; }
+  // Cursos que el usuario puede ver: los suyos y, si es administrador, todos (también los borradores).
+  function loadCourses() {
+    return sb.from("courses")
+      .select("slug,title,category,grad,cover_path,status,sort_order,price_cop,price_usd,short,promise,who,bullets,learn,extras,kit,course_modules(id,position,title,course_lessons(id,position,title,exercise))")
+      .order("sort_order").then(function (r) {
+        if (r.error) throw r.error;
+        COURSES = {};
+        (r.data || []).forEach(function (c) {
+          c.modules = (c.course_modules || []).slice().sort(byPos).map(function (m) {
+            return { id: m.id, title: m.title, lessons: (m.course_lessons || []).slice().sort(byPos) };
+          });
+          c.cat = c.category || "Guía";
+          c.cover = coverUrl(c.cover_path);
+          c.icon = window.TC_ICON ? window.TC_ICON(c.slug) : "";
+          COURSES[c.slug] = c;
+        });
+        SLUGS = Object.keys(COURSES);
+        return COURSES;
+      });
+  }
+  function lessonIds(slug) {
+    var c = COURSES[slug], ids = [];
+    if (c) c.modules.forEach(function (m) { m.lessons.forEach(function (l) { ids.push(l.id); }); });
+    return ids;
+  }
 
   // ---------- /entrar ----------
   function initLogin() {
-    var next = safeNext(new URLSearchParams(location.search).get("next"));
+    var qs = new URLSearchParams(location.search);
+    var next = safeNext(qs.get("next"));
     var emailForm = $("form-email"), codeForm = $("form-code");
+    if (qs.get("registro")) {
+      $("auth-title").textContent = "Únete gratis";
+      $("auth-lead").textContent = "Crea tu cuenta con tu correo: te enviamos un código de 6 dígitos y entras sin contraseña. Después ves tus cursos en «Mis cursos».";
+      emailForm.querySelector("button[type=submit]").textContent = "Crear mi cuenta gratis";
+      $("auth-switch").innerHTML = '¿Ya tienes cuenta? <a href="/entrar">Entra aquí</a>.';
+      document.title = "Únete gratis · Academia Taller Creativo";
+    } else {
+      $("auth-switch").innerHTML = '¿Primera vez? <a href="/entrar?registro=1">Únete gratis</a>.';
+    }
     var email = "", cooldown = 0, timer = null;
     getSession().then(function (s) { if (s) location.replace(next); });
 
@@ -168,14 +207,15 @@
       sb.rpc("is_academy_admin").then(function (r) { if (r.data === true) show($("admin-link"), true); });
 
       Promise.all([
+        loadCourses(),
         sb.from("enrollments").select("course_slug,created_at").eq("email", email).order("created_at"),
-        sb.from("lesson_progress").select("course_slug,lesson_key")
+        sb.from("lesson_progress").select("lesson_id")
       ]).then(function (res) {
         show($("loading"), false);
-        if (res[0].error) return setMsg("No se pudieron cargar tus guías. Recarga la página.", "err");
-        var mine = (res[0].data || []).filter(function (e) { return COURSES[e.course_slug]; });
-        var done = {};
-        (res[1].data || []).forEach(function (p) { done[p.course_slug] = (done[p.course_slug] || 0) + 1; });
+        if (res[1].error) return setMsg("No se pudieron cargar tus guías. Recarga la página.", "err");
+        var mine = (res[1].data || []).filter(function (e) { return COURSES[e.course_slug]; });
+        var doneIds = {};
+        (res[2].data || []).forEach(function (p) { doneIds[p.lesson_id] = true; });
         if (mine.length === 0) return show($("empty"), true);
         var list = $("courses");
         var cards = [];
@@ -187,8 +227,9 @@
           return "Llevas " + d + " de " + total + " lecciones. ¡Sigue así!";
         }
         mine.forEach(function (e) {
-          var slug = e.course_slug, c = COURSES[slug], total = totalLessons(slug), d = Math.min(done[slug] || 0, total);
-          var href = "/curso?g=" + slug;
+          var slug = e.course_slug, c = COURSES[slug], total = totalLessons(slug);
+          var d = lessonIds(slug).filter(function (id) { return doneIds[id]; }).length;
+          var href = "/curso?g=" + encodeURIComponent(slug);
           var cover = el("a", { class: "dm-cover " + (c.cover ? "" : c.grad), href: href, "aria-label": "Abrir " + c.title });
           if (c.cover) cover.appendChild(el("img", { src: c.cover, alt: "", loading: "lazy", width: "960", height: "504" }));
           else cover.innerHTML = c.icon;
@@ -231,7 +272,7 @@
           });
           empty.hidden = n > 0;
         });
-      });
+      }).catch(function () { show($("loading"), false); setMsg("No se pudieron cargar tus guías. Recarga la página.", "err"); });
     });
   }
 
@@ -241,274 +282,133 @@
     requireSession().then(function (session) {
       var email = myEmail(session);
       $("logout").addEventListener("click", logout);
-      if (!COURSES[slug]) { show($("loading"), false); return show($("denied"), true); }
-      var c = COURSES[slug];
-      $("crumb").textContent = c.title;
-      document.title = c.title + " · Mi curso · Academia Taller Creativo";
+      loadCourses().then(function () {
+        var c = COURSES[slug];
+        if (!c) { show($("loading"), false); return show($("denied"), true); }
+        $("crumb").textContent = c.title;
+        document.title = c.title + " · Mi curso · Academia Taller Creativo";
+        var ids = lessonIds(slug);
 
-      Promise.all([
-        sb.from("enrollments").select("course_slug").eq("email", email).eq("course_slug", slug).maybeSingle(),
-        sb.from("lesson_progress").select("lesson_key").eq("course_slug", slug),
-        sb.from("lesson_videos").select("lesson_key,video_path").eq("course_slug", slug)
-      ]).then(function (res) {
-        show($("loading"), false);
-        if (res[0].error || !res[0].data) return show($("denied"), true);
-        var done = {};
-        (res[1].data || []).forEach(function (p) { done[p.lesson_key] = true; });
-        var videos = {};
-        (res[2].data || []).forEach(function (v) { videos[v.lesson_key] = v.video_path; });
-        var total = totalLessons(slug);
-        $("c-title").textContent = c.title;
-        $("c-cover").className = "mc-cover " + c.grad;
-        $("c-cover").innerHTML = c.icon;
-        show($("reader"), true);
+        Promise.all([
+          sb.from("enrollments").select("course_slug").eq("email", email).eq("course_slug", slug).maybeSingle(),
+          ids.length ? sb.from("lesson_progress").select("lesson_id").in("lesson_id", ids) : Promise.resolve({ data: [] }),
+          ids.length ? sb.from("lesson_videos").select("lesson_id,video_path").in("lesson_id", ids) : Promise.resolve({ data: [] })
+        ]).then(function (res) {
+          show($("loading"), false);
+          if (res[0].error || !res[0].data) return show($("denied"), true);
+          var done = {};
+          (res[1].data || []).forEach(function (p) { done[p.lesson_id] = true; });
+          var videos = {};
+          (res[2].data || []).forEach(function (v) { videos[v.lesson_id] = v.video_path; });
+          var total = totalLessons(slug);
+          $("c-title").textContent = c.title;
+          $("c-cover").className = "mc-cover " + (c.cover ? "" : c.grad);
+          if (c.cover) { $("c-cover").textContent = ""; $("c-cover").appendChild(el("img", { src: c.cover, alt: "" })); $("c-cover").classList.add("has-cover"); }
+          else $("c-cover").innerHTML = c.icon;
+          show($("reader"), true);
 
-        function count() { return Object.keys(done).length; }
-        function paint() {
-          var n = Math.min(count(), total);
-          $("c-count").textContent = n + " de " + total + " lecciones hechas";
-          var pb = $("c-bar");
-          pb.firstChild.style.width = (total ? Math.round((n * 100) / total) : 0) + "%";
-          pb.setAttribute("aria-valuenow", String(total ? Math.round((n * 100) / total) : 0));
-          show($("c-done"), n >= total && total > 0);
-          Array.prototype.forEach.call(document.querySelectorAll(".mod"), function (d) {
-            var cnt = d.querySelectorAll("input:checked").length, all = d.querySelectorAll("input").length;
-            d.querySelector(".mod-count").textContent = cnt + "/" + all;
-          });
-        }
-
-        var firstPending = null;
-        var host = $("modules");
-        c.modules.forEach(function (m, mi) {
-          var det = el("details", { class: "mod" });
-          det.appendChild(el("summary", {}, [
-            el("span", { class: "mod-num", text: String(mi + 1) }),
-            el("span", { class: "mod-title", text: m.title }),
-            el("span", { class: "mod-count", text: "" })
-          ]));
-          var ul = el("ul", { class: "lessons lessons-check" });
-          m.lessons.forEach(function (l, li) {
-            var key = (mi + 1) + "." + (li + 1);
-            var input = el("input", { type: "checkbox", id: "l-" + key.replace(".", "-") });
-            input.checked = !!done[key];
-            if (!input.checked && !firstPending) firstPending = det;
-            input.addEventListener("change", function () {
-              var wantDone = input.checked;
-              input.disabled = true;
-              var req = wantDone
-                ? sb.from("lesson_progress").insert({ course_slug: slug, lesson_key: key })
-                : sb.from("lesson_progress").delete().eq("course_slug", slug).eq("lesson_key", key);
-              req.then(function (r) {
-                input.disabled = false;
-                if (r.error && !(wantDone && r.error.code === "23505")) {
-                  input.checked = !wantDone;
-                  return setMsg("No se pudo guardar tu avance. Revisa tu conexión.", "err");
-                }
-                setMsg("");
-                if (wantDone) done[key] = true; else delete done[key];
-                paint();
-              });
+          function count() { return Object.keys(done).length; }
+          function paint() {
+            var n = Math.min(count(), total);
+            $("c-count").textContent = n + " de " + total + " lecciones hechas";
+            var pb = $("c-bar");
+            pb.firstChild.style.width = (total ? Math.round((n * 100) / total) : 0) + "%";
+            pb.setAttribute("aria-valuenow", String(total ? Math.round((n * 100) / total) : 0));
+            show($("c-done"), n >= total && total > 0);
+            Array.prototype.forEach.call(document.querySelectorAll(".mod"), function (d) {
+              var cnt = d.querySelectorAll("input:checked").length, all = d.querySelectorAll("input").length;
+              d.querySelector(".mod-count").textContent = cnt + "/" + all;
             });
-            var slot = el("div", { class: "video-slot" });
-            if (videos[key]) {
-              var play = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "▶ Ver el video de esta lección" });
-              play.addEventListener("click", function () {
-                play.disabled = true;
-                play.textContent = "Cargando video…";
-                signedVideo(videos[key]).then(function (url) {
-                  var v = el("video", { controls: "", playsinline: "", preload: "metadata", controlsList: "nodownload", disablepictureinpicture: "", src: url });
-                  v.addEventListener("contextmenu", function (e) { e.preventDefault(); });
-                  v.addEventListener("ended", function () { if (!input.checked) input.click(); });
-                  slot.textContent = "";
-                  slot.appendChild(v);
-                  v.play().catch(function () {});
-                }).catch(function (e) { play.disabled = false; play.textContent = "▶ Ver el video de esta lección"; setMsg(e.message, "err"); });
-              });
-              slot.appendChild(play);
-            }
-            ul.appendChild(el("li", {}, [
-              el("label", { for: input.id }, [
-                input,
-                el("span", { class: "les-main" }, [
-                  el("span", { class: "les-name", text: l.t + (videos[key] ? "  🎬" : "") }),
-                  el("span", { class: "les-do" }, [el("b", { text: "Ejercicio: " }), l.e])
-                ])
-              ]),
-              slot
+          }
+
+          var firstPending = null;
+          var host = $("modules");
+          c.modules.forEach(function (m, mi) {
+            var det = el("details", { class: "mod" });
+            det.appendChild(el("summary", {}, [
+              el("span", { class: "mod-num", text: String(mi + 1) }),
+              el("span", { class: "mod-title", text: m.title }),
+              el("span", { class: "mod-count", text: "" })
             ]));
+            var ul = el("ul", { class: "lessons lessons-check" });
+            m.lessons.forEach(function (l, li) {
+              var lid = l.id;
+              var input = el("input", { type: "checkbox", id: "l-" + lid });
+              input.checked = !!done[lid];
+              if (!input.checked && !firstPending) firstPending = det;
+              input.addEventListener("change", function () {
+                var wantDone = input.checked;
+                input.disabled = true;
+                var req = wantDone
+                  ? sb.from("lesson_progress").insert({ lesson_id: lid })
+                  : sb.from("lesson_progress").delete().eq("lesson_id", lid);
+                req.then(function (r) {
+                  input.disabled = false;
+                  if (r.error && !(wantDone && r.error.code === "23505")) {
+                    input.checked = !wantDone;
+                    return setMsg("No se pudo guardar tu avance. Revisa tu conexión.", "err");
+                  }
+                  setMsg("");
+                  if (wantDone) done[lid] = true; else delete done[lid];
+                  paint();
+                });
+              });
+              var slot = el("div", { class: "video-slot" });
+              if (videos[lid]) {
+                var play = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "▶ Ver el video de esta lección" });
+                play.addEventListener("click", function () {
+                  play.disabled = true;
+                  play.textContent = "Cargando video…";
+                  signedVideo(videos[lid]).then(function (url) {
+                    var v = el("video", { controls: "", playsinline: "", preload: "metadata", controlsList: "nodownload", disablepictureinpicture: "", src: url });
+                    v.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+                    v.addEventListener("ended", function () { if (!input.checked) input.click(); });
+                    slot.textContent = "";
+                    slot.appendChild(v);
+                    v.play().catch(function () {});
+                  }).catch(function (e) { play.disabled = false; play.textContent = "▶ Ver el video de esta lección"; setMsg(e.message, "err"); });
+                });
+                slot.appendChild(play);
+              }
+              ul.appendChild(el("li", {}, [
+                el("label", { for: input.id }, [
+                  input,
+                  el("span", { class: "les-main" }, [
+                    el("span", { class: "les-name", text: l.title + (videos[lid] ? "  🎬" : "") }),
+                    l.exercise ? el("span", { class: "les-do" }, [el("b", { text: "Ejercicio: " }), l.exercise]) : null
+                  ])
+                ]),
+                slot
+              ]));
+            });
+            det.appendChild(ul);
+            host.appendChild(det);
           });
-          det.appendChild(ul);
-          host.appendChild(det);
+          if (firstPending) firstPending.open = true; else if (host.firstChild) host.firstChild.open = true;
+          $("c-resume").addEventListener("click", function () {
+            var pending = Array.prototype.filter.call(document.querySelectorAll(".mod input"), function (i) { return !i.checked; });
+            var target = pending[0];
+            if (!target) return;
+            var d = target.closest("details");
+            d.open = true;
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          $("c-pdf-dl").addEventListener("click", function () { openPdf(slug, true).catch(function (e) { setMsg(e.message, "err"); }); });
+          $("c-pdf-open").addEventListener("click", function () { openPdf(slug, false).catch(function (e) { setMsg(e.message, "err"); }); });
+          paint();
         });
-        if (firstPending) firstPending.open = true; else if (host.firstChild) host.firstChild.open = true;
-        $("c-resume").addEventListener("click", function () {
-          var pending = Array.prototype.filter.call(document.querySelectorAll(".mod input"), function (i) { return !i.checked; });
-          var target = pending[0];
-          if (!target) return;
-          var d = target.closest("details");
-          d.open = true;
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-        $("c-pdf-dl").addEventListener("click", function () { openPdf(slug, true).catch(function (e) { setMsg(e.message, "err"); }); });
-        $("c-pdf-open").addEventListener("click", function () { openPdf(slug, false).catch(function (e) { setMsg(e.message, "err"); }); });
-        paint();
-      });
+      }).catch(function () { show($("loading"), false); show($("denied"), true); });
     });
   }
 
-  // ---------- /admin ----------
-  function initAdmin() {
-    requireSession().then(function (session) {
-      $("logout").addEventListener("click", logout);
-      sb.rpc("is_academy_admin").then(function (r) {
-        show($("loading"), false);
-        if (r.data !== true) return show($("denied"), true);
-        show($("admin"), true);
-
-        var checks = $("slugs");
-        SLUGS.forEach(function (s) {
-          checks.appendChild(el("label", { class: "chk" }, [el("input", { type: "checkbox", value: s, name: "slug" }), " " + courseTitle(s)]));
-        });
-        $("all4").addEventListener("click", function () {
-          Array.prototype.forEach.call(checks.querySelectorAll("input"), function (i) { i.checked = true; });
-        });
-
-        var rows = [];
-        function render() {
-          var q = $("filter").value.trim().toLowerCase();
-          var by = {};
-          rows.forEach(function (e) { (by[e.email] = by[e.email] || []).push(e); });
-          var host = $("list");
-          host.textContent = "";
-          var emails = Object.keys(by).filter(function (m) { return !q || m.indexOf(q) !== -1; }).sort(function (a, b) {
-            return by[b][0].created_at < by[a][0].created_at ? -1 : 1;
-          });
-          $("count").textContent = emails.length + " correo(s)";
-          if (!emails.length) host.appendChild(el("p", { class: "muted", text: "Todavía no hay accesos." }));
-          emails.forEach(function (m) {
-            var chips = by[m].map(function (e) {
-              var x = el("button", { class: "chip-x", type: "button", title: "Quitar el acceso a esta guía", "aria-label": "Quitar " + courseTitle(e.course_slug), text: "×" });
-              x.addEventListener("click", function () {
-                if (!window.confirm("¿Quitar «" + courseTitle(e.course_slug) + "» a " + m + "?")) return;
-                sb.rpc("revoke_access", { p_email: m, p_slug: e.course_slug }).then(function (r) {
-                  if (r.error) return setMsg(r.error.message, "err");
-                  load();
-                });
-              });
-              return el("span", { class: "chip" }, [courseTitle(e.course_slug), " ", x]);
-            });
-            var when = new Date(by[m][0].created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
-            host.appendChild(el("div", { class: "arow" }, [
-              el("div", { class: "arow-top" }, [el("b", { text: m }), el("span", { class: "muted", text: when + " · " + by[m][0].source })]),
-              el("div", { class: "chips" }, chips)
-            ]));
-          });
-        }
-        function load() {
-          sb.from("enrollments").select("email,course_slug,source,created_at").order("created_at", { ascending: false }).limit(1000).then(function (r) {
-            if (r.error) return setMsg(r.error.message, "err");
-            rows = r.data || [];
-            render();
-          });
-        }
-        initVideoPanel();
-        $("filter").addEventListener("input", render);
-        $("form-grant").addEventListener("submit", function (ev) {
-          ev.preventDefault();
-          var email = $("g-email").value.trim().toLowerCase();
-          var slugs = Array.prototype.map.call(checks.querySelectorAll("input:checked"), function (i) { return i.value; });
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setMsg("Escribe un correo válido.", "err");
-          if (!slugs.length) return setMsg("Elige al menos una guía.", "err");
-          var btn = $("form-grant").querySelector("button[type=submit]");
-          btn.disabled = true;
-          sb.rpc("grant_access", { p_email: email, p_slugs: slugs, p_source: $("g-source").value, p_note: $("g-note").value.trim() || null }).then(function (r) {
-            btn.disabled = false;
-            if (r.error) return setMsg(r.error.message, "err");
-            setMsg(r.data > 0 ? "Listo: " + r.data + " guía(s) nueva(s) para " + email + "." : email + " ya tenía esas guías.", "ok");
-            $("g-email").value = "";
-            $("g-note").value = "";
-            Array.prototype.forEach.call(checks.querySelectorAll("input"), function (i) { i.checked = false; });
-            load();
-          });
-        });
-        load();
-      });
-    });
-  }
-
-  // Panel «Videos de las lecciones» (solo administradores): sube, reemplaza, abre y quita el video de cada lección.
-  function initVideoPanel() {
-    var sel = $("v-slug"), host = $("v-list");
-    SLUGS.forEach(function (s) { sel.appendChild(el("option", { value: s, text: courseTitle(s) })); });
-    var MAX = 2 * 1024 * 1024 * 1024, TYPES = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
-
-    function render() {
-      var slug = sel.value;
-      host.textContent = "Cargando…";
-      sb.from("lesson_videos").select("lesson_key,video_path,file_name,size_bytes").eq("course_slug", slug).then(function (r) {
-        if (r.error) { host.textContent = ""; return setMsg(r.error.message, "err"); }
-        var by = {};
-        (r.data || []).forEach(function (v) { by[v.lesson_key] = v; });
-        host.textContent = "";
-        COURSES[slug].modules.forEach(function (m, mi) {
-          host.appendChild(el("h3", { class: "vmod", text: (mi + 1) + ". " + m.title }));
-          m.lessons.forEach(function (l, li) {
-            var key = (mi + 1) + "." + (li + 1), v = by[key];
-            var status = el("span", { class: "vstatus" + (v ? " has" : ""), text: v ? "Con video · " + (v.file_name || "") + (v.size_bytes ? " · " + human(v.size_bytes) : "") : "Sin video" });
-            var file = el("input", { type: "file", accept: "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov", hidden: "" });
-            var up = el("button", { class: "btn btn-sm", type: "button", text: v ? "Reemplazar" : "Subir video" });
-            up.addEventListener("click", function () { file.click(); });
-            file.addEventListener("change", function () {
-              var f = file.files && file.files[0];
-              if (!f) return;
-              var ext = TYPES[f.type] || (f.name.split(".").pop() || "").toLowerCase();
-              if (!TYPES[f.type] && ["mp4", "webm", "mov"].indexOf(ext) === -1) { file.value = ""; return setMsg("El video debe ser MP4, WebM o MOV.", "err"); }
-              if (f.size > MAX) { file.value = ""; return setMsg("El video pesa más de 2 GB.", "err"); }
-              var path = slug + "/" + key + "-" + Date.now() + "." + ext;
-              up.disabled = true;
-              up.textContent = "Subiendo… no cierres la página";
-              setMsg("");
-              sb.storage.from("videos").upload(path, f, { contentType: f.type || "video/" + (ext === "mov" ? "quicktime" : ext), upsert: false }).then(function (u) {
-                if (u.error) throw u.error;
-                return sb.from("lesson_videos").upsert({ course_slug: slug, lesson_key: key, video_path: path, file_name: f.name.slice(0, 200), size_bytes: f.size });
-              }).then(function (w) {
-                if (w.error) { sb.storage.from("videos").remove([path]); throw w.error; }
-                if (v && v.video_path && v.video_path !== path) sb.storage.from("videos").remove([v.video_path]);
-                setMsg("Video guardado en la lección " + key + ".", "ok");
-                render();
-              }).catch(function (e) {
-                up.disabled = false;
-                up.textContent = v ? "Reemplazar" : "Subir video";
-                setMsg((e && e.message) || "No se pudo subir el video.", "err");
-              });
-            });
-            var actions = el("div", { class: "vactions" }, [up, file]);
-            if (v) {
-              var view = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "Ver" });
-              view.addEventListener("click", function () { signedVideo(v.video_path, 600).then(function (u) { window.open(u, "_blank", "noopener"); }).catch(function (e) { setMsg(e.message, "err"); }); });
-              var del = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "Quitar" });
-              del.addEventListener("click", function () {
-                if (!window.confirm("¿Quitar el video de la lección " + key + "? Los alumnos dejarán de verlo.")) return;
-                sb.from("lesson_videos").delete().eq("course_slug", slug).eq("lesson_key", key).then(function (d) {
-                  if (d.error) return setMsg(d.error.message, "err");
-                  sb.storage.from("videos").remove([v.video_path]);
-                  render();
-                });
-              });
-              actions.appendChild(view);
-              actions.appendChild(del);
-            }
-            host.appendChild(el("div", { class: "vrow" }, [el("div", { class: "vinfo" }, [el("b", { text: key + " " + l.t.replace(/^[0-9.]+\s*/, "") }), status]), actions]));
-          });
-        });
-      });
-    }
-    sel.addEventListener("change", render);
-    render();
-  }
+  // Lo que comparte el panel de administración (js/admin.js).
+  window.TC_ZONA = {
+    sb: sb, el: el, $: $, show: show, setMsg: setMsg, requireSession: requireSession, logout: logout, human: human, signedVideo: signedVideo,
+    loadCourses: loadCourses, courses: function () { return COURSES; }, coverUrl: coverUrl, url: SUPABASE_URL
+  };
 
   if (page === "entrar") initLogin();
   else if (page === "mis-cursos") initMyCourses();
   else if (page === "curso") initCourse();
-  else if (page === "admin") initAdmin();
+  // /admin lo maneja js/admin.js
 })();

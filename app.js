@@ -16,24 +16,14 @@
       gumroad: { dibujo: "", pintura: "", jabones: "", velas: "", "dibujo-pintura": "", "jabones-velas": "", "paquete-completo": "" },
       hotmart: { dibujo: "", pintura: "", jabones: "", velas: "", "dibujo-pintura": "", "jabones-velas": "", "paquete-completo": "" },
       wompi:   { dibujo: "", pintura: "", jabones: "", velas: "", "dibujo-pintura": "", "jabones-velas": "", "paquete-completo": "" }
-    },
-
-    // Precios por cantidad de guías en el carrito.
-    prices: {
-      cop: { one: 24000, two: 36000, three: 48000, four: 55900, preset: 29900 },
-      usd: { one: 6,     two: 9,     three: 12,    four: 14,    preset: 7.5 }
     }
   };
   // ==========================================================================
 
-  var GUIDES = {
-    dibujo:  "Dibujo Desde Cero",
-    pintura: "Pintura Desde Cero",
-    jabones: "Jabones Artesanales",
-    velas:   "Velas Artesanales"
-  };
-  // Parejas que ya son paquete con descuento → producto propio.
-  var PRESETS = { "dibujo+pintura": "dibujo-pintura", "jabones+velas": "jabones-velas" };
+  // Los cursos, los precios y los paquetes salen del catálogo en vivo (js/catalog.js, lo que se publica en /admin).
+  var TC = window.TC || { courses: [], bundles: [], tiers: [], course: function () { return null; }, price: function () { return { total: 0, base: 0, saving: 0, bundle: null, sku: "" }; }, money: function (n) { return String(n); }, unit: function () { return 0; }, nextTier: function () { return null; }, renderAll: function () {} };
+  function titleOf(k) { var c = TC.course(k); return c ? c.title : k; }
+  function exists(k) { return !!TC.course(k); }
   var PROVIDERS = [
     { id: "gumroad", label: "Pagar con tarjeta", cur: "usd" },
     { id: "hotmart", label: "Pagar en pesos (Hotmart)", cur: "cop" },
@@ -50,43 +40,25 @@
   var cart = [];
   try {
     var raw = JSON.parse(localStorage.getItem("tc_cart") || "[]");
-    cart = raw.filter(function (k, i) { return GUIDES[k] && raw.indexOf(k) === i; });
+    cart = raw.filter(function (k, i) { return typeof k === "string" && raw.indexOf(k) === i; });
   } catch (e) {}
 
   function saveCart() { try { localStorage.setItem("tc_cart", JSON.stringify(cart)); } catch (e) {} }
 
-  function money(n, cur) {
-    cur = cur || currency;
-    if (cur === "cop") return "COP $" + n.toLocaleString("es-CO");
-    return "US$" + (n % 1 ? n.toFixed(2).replace(".", ",") : n);
-  }
+  function money(n, cur) { return TC.money(n, cur || currency); }
   function waLink(text) { return "https://wa.me/" + CONFIG.whatsapp + "?text=" + encodeURIComponent(text); }
 
   // ---------- precios del carrito ------------------------------------------
   function sortedKeys() { return cart.slice().sort(); }
-  function skuOf(keys) {
-    if (keys.length === 1) return keys[0];
-    if (keys.length === 4) return "paquete-completo";
-    if (keys.length === 2) return PRESETS[keys.join("+")] || "";
-    return "";
-  }
-  function totalFor(n, keys, cur) {
-    var p = CONFIG.prices[cur];
-    if (n === 0) return 0;
-    if (n === 1) return p.one;
-    if (n === 2) return PRESETS[keys.join("+")] ? p.preset : p.two;
-    if (n === 3) return p.three;
-    return p.four;
-  }
+  function priceOf(keys, cur) { return TC.price(keys, cur || currency); }
+  function totalFor(n, keys, cur) { return n === 0 ? 0 : priceOf(keys, cur).total; }
   function hintFor(n, keys) {
-    var p = CONFIG.prices[currency];
-    if (n === 1) return "Suma otra guía y pagas menos por cada una.";
-    if (n === 2) return PRESETS[keys.join("+")]
-      ? "¡Paquete con descuento aplicado!"
-      : "Tip: Dibujo + Pintura y Jabones + Velas cuestan " + money(p.preset) + " cada paquete.";
-    if (n === 3) return "Con las 4 guías pagas solo " + money(p.four - p.three) + " más.";
-    if (n === 4) return "¡Paquete completo aplicado: el mejor precio!";
-    return "";
+    var r = priceOf(keys, currency);
+    if (r.bundle) return "¡Paquete con descuento aplicado!";
+    var next = TC.nextTier(n);
+    if (n === 1) return next ? "Suma otra guía y pagas menos por cada una." : "";
+    if (next) return "Suma " + (next.min_qty - n) + " guía" + (next.min_qty - n > 1 ? "s" : "") + " más y el descuento sube a " + Number(next.percent_off) + " %.";
+    return "¡Descuento máximo aplicado: el mejor precio!";
   }
 
   // ---------- carrito: interfaz --------------------------------------------
@@ -108,7 +80,7 @@
   }
 
   function add(keys, open) {
-    keys.forEach(function (k) { if (GUIDES[k] && cart.indexOf(k) < 0) cart.push(k); });
+    keys.forEach(function (k) { if (exists(k) && cart.indexOf(k) < 0) cart.push(k); });
     saveCart(); render();
     if (open !== false) openCart();
   }
@@ -150,21 +122,21 @@
     list.innerHTML = "";
     empty.hidden = n > 0; summary.hidden = n === 0;
 
-    var one = CONFIG.prices[currency].one;
     keys.forEach(function (k) {
       var li = document.createElement("li");
       li.innerHTML = '<span class="ci-name"></span><span class="ci-price"></span><button type="button" class="ci-x" aria-label="Quitar"></button>';
-      li.querySelector(".ci-name").textContent = GUIDES[k];
-      li.querySelector(".ci-price").textContent = money(one);
+      li.querySelector(".ci-name").textContent = titleOf(k);
+      li.querySelector(".ci-price").textContent = money(TC.course(k) ? TC.unit(TC.course(k), currency) : 0);
       li.querySelector(".ci-x").textContent = "×";
-      li.querySelector(".ci-x").setAttribute("aria-label", "Quitar " + GUIDES[k]);
+      li.querySelector(".ci-x").setAttribute("aria-label", "Quitar " + titleOf(k));
       li.querySelector(".ci-x").addEventListener("click", function () { remove(k); });
       list.appendChild(li);
     });
     if (n === 0) return;
 
-    var total = totalFor(n, keys, currency);
-    var saving = one * n - total;
+    var pr = priceOf(keys, currency);
+    var total = pr.total;
+    var saving = pr.saving;
     drawer.querySelector(".cart-total").textContent = money(total);
     var sv = drawer.querySelector(".cart-saving");
     sv.textContent = saving > 0 ? "Ahorras " + money(saving) : "";
@@ -172,10 +144,10 @@
     drawer.querySelector(".cart-hint").textContent = hintFor(n, keys);
 
     // Botones de pago
-    var sku = skuOf(keys);
+    var sku = pr.sku;
     var box = drawer.querySelector(".cart-pay");
     box.innerHTML = "";
-    var titles = keys.map(function (k) { return GUIDES[k]; }).join(" + ");
+    var titles = keys.map(function (k) { return titleOf(k); }).join(" + ");
     var any = false;
     PROVIDERS.forEach(function (pv) {
       var url = sku && CONFIG.links[pv.id] && CONFIG.links[pv.id][sku];
@@ -230,7 +202,10 @@
     if ((a.interes === "jabones" || a.interes === "velas") && (a.meta === "vender" || a.meta === "regalar")) keys = ["jabones", "velas"];
     keys.sort();
     var pair = keys.length === 2;
-    var title = pair ? keys.map(function (k) { return GUIDES[k].replace(" Desde Cero", "").replace(" Artesanales", ""); }).join(" + ") : GUIDES[keys[0]];
+    keys = keys.filter(exists);
+    if (!keys.length && TC.courses.length) keys = [TC.courses[0].slug];
+    pair = keys.length === 2;
+    var title = pair ? keys.map(function (k) { return titleOf(k).replace(" Desde Cero", "").replace(" Artesanales", ""); }).join(" + ") : (keys[0] ? titleOf(keys[0]) : "");
 
     var why = [];
     var about = {
@@ -271,9 +246,11 @@
     }
     var r = quizRecommend(quiz.answers);
     var n = r.keys.length;
-    var one = CONFIG.prices[currency].one;
-    var tot = totalFor(n, r.keys, currency);
-    var saving = one * n - tot;
+    var qp = priceOf(r.keys, currency);
+    var tot = qp.total;
+    var saving = qp.saving;
+    var allSlugs = TC.courses.map(function (c) { return c.slug; });
+    var fullPack = allSlugs.length > 1 ? priceOf(allSlugs, currency).total : 0;
     var allIn = r.keys.every(function (k) { return cart.indexOf(k) >= 0; });
     var detail = r.pair ? "#paquetes" : "/guias/" + r.keys[0];
     var h = '<div class="quiz-top"><span class="quiz-step">Tu recomendación</span><div class="quiz-track" aria-hidden="true"><i style="width:100%"></i></div></div>' +
@@ -283,7 +260,7 @@
     h += '</ul><p class="quiz-price"><b>' + money(tot) + '</b>' + (saving > 0 ? ' <span>Ahorras ' + money(saving) + '</span>' : '') + '</p>' +
       '<div class="quiz-cta"><button type="button" class="btn" data-q-add>' + (allIn ? "Ya está en tu carrito" : "Agregar al carrito") + '</button>' +
       '<a class="btn btn-ghost" href="' + detail + '">' + (r.pair ? "Ver paquetes" : "Ver la guía") + '</a></div>' +
-      '<p class="quiz-alt">¿Prefieres llevarte todo? <a href="#" data-add-pack="dibujo,pintura,jabones,velas">Paquete completo · ' + money(CONFIG.prices[currency].four) + '</a></p></div>' +
+      '' + (allSlugs.length > 2 && r.keys.length < allSlugs.length ? '<p class="quiz-alt">¿Prefieres llevarte todo? <a href="#" data-add-pack="' + allSlugs.join(",") + '">Paquete completo · ' + money(fullPack) + '</a></p>' : '') + '</div>' +
       '<button type="button" class="quiz-link" data-q-restart>↺ Volver a empezar</button>';
     quizHtml(h);
   }
@@ -333,6 +310,33 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeCart(); });
 
   var y = document.getElementById("year"); if (y) y.textContent = new Date().getFullYear();
-  renderQuiz();
+
+  // Botones de la cuenta del menú: «Únete gratis» y «Entrar» si no hay sesión; «Mis cursos» si la hay.
+  function hasSession() {
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf("sb-") === 0 && k.slice(-11) === "-auth-token") {
+          var v = JSON.parse(localStorage.getItem(k) || "null");
+          if (v && v.access_token && (!v.expires_at || v.expires_at * 1000 > Date.now() - 86400000 * 30)) return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
+  var logged = hasSession();
+  document.querySelectorAll("[data-auth]").forEach(function (el) { el.hidden = el.getAttribute("data-auth") === (logged ? "out" : "in"); });
+
+  // Primer dibujo con lo que haya (puede venir de la memoria del navegador) y se repite cuando llegan los datos.
+  function paint() {
+    if (TC.loaded && TC.courses.length) { cart = cart.filter(exists); saveCart(); }
+    TC.renderAll();
+    renderQuiz();
+    render();
+  }
   render();
+  if (window.TC && window.TC.ready) {
+    if (TC.loaded) paint();
+    TC.ready.then(paint);
+  } else { renderQuiz(); render(); }
 })();

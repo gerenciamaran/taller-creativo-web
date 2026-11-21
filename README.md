@@ -17,13 +17,16 @@ git add -A && git commit -m "..." && git push
 Productos (clave de enlace): `dibujo`, `pintura`, `jabones`, `velas`, `dibujo-pintura`, `jabones-velas`, `paquete-completo`.
 Las demás combinaciones (por ejemplo Dibujo + Jabones o cualquier trío) se cobran por WhatsApp o, más adelante, con Wompi.
 
-## Zona de alumnos (Supabase)
+## Cursos en la base de datos, zona de alumnos y panel de administración (Supabase)
 
-Páginas: `/entrar` (código de 6 dígitos al correo), `/mis-cursos`, `/curso?g=<guía>` (lecciones, avance y PDF) y `/admin` (dar o quitar acceso). `build.py` las genera junto con `js/cursos.js`; la lógica está en `js/zona.js` y la librería de Supabase, en `js/supabase.js`.
+Los cursos ya no se escriben en el código: viven en Supabase y se manejan desde `/admin`.
 
-- **Proyecto de Supabase:** `taller-creativo` (ref `kpseadjekdezqwjjflfg`, organización DAVINCI). Migraciones en `supabase/migrations/`; configuración de Auth (plantilla del correo con el código) en `supabase/config.toml` (`supabase config push`).
-- **Acceso por correo:** tabla `enrollments(email, course_slug)`. Un administrador da acceso desde `/admin` (función `grant_access`); más adelante los avisos de pago (Wompi, Gumroad, Hotmart) solo necesitan insertar el correo del comprador.
-- **PDF:** bucket privado `guides` (`dibujo.pdf`, `pintura.pdf`, `jabones.pdf`, `velas.pdf`), con enlaces temporales y solo para quien tiene la guía.
+- **Catálogo y páginas de cada curso** (`js/catalog.js`): la portada y `/guias/<curso>` (plantilla única `guia.html`) leen lo publicado, los descuentos por cantidad y los paquetes. El carrito (`app.js`) calcula los precios con esos datos. `vercel.json` (y `serve.json` para pruebas locales) mandan `/guias/:slug` a `guia.html`.
+- **Páginas:** `/entrar` (código de 6 dígitos al correo; `?registro=1` = «Únete gratis»), `/mis-cursos`, `/curso?g=<curso>` (lecciones, avance, PDF y videos) y `/admin`.
+- **Panel `/admin`** (`js/admin.js`): Cursos (crear/editar con portada, PDF, módulos, lecciones, ejercicios y videos; publicar u ocultar), Precios y paquetes (descuentos por cantidad y paquetes de precio fijo) y Alumnos y accesos (dar o quitar acceso por correo).
+- **Base de datos:** proyecto `taller-creativo` (ref `kpseadjekdezqwjjflfg`, organización DAVINCI). Migraciones en `supabase/migrations/` (`gen_0003.py` genera la 0003 a partir de las 4 guías iniciales de `build.py`); Auth y plantilla del correo en `supabase/config.toml` (`supabase config push`).
+- **Acceso por correo:** `enrollments(email, course_slug)`. Un administrador da acceso desde `/admin`; los avisos de pago (Wompi, Gumroad, Hotmart) solo necesitarán insertar el correo del comprador.
+- **Archivos:** portadas en el bucket público `covers`; PDF en el privado `guides` (`<curso>.pdf`); videos en el privado `videos` (`<curso>/<lección>-….mp4`), con enlaces temporales y solo para quien tiene el curso.
 - **Administradores:** tabla `academy_admins` (correos).
-- **Claves:** la URL y la clave `anon` van en `js/zona.js` (son públicas). La clave de servicio y la contraseña de la base de datos solo están en `.env.local` (no se sube a git).
-- **Botón «Mis cursos» del menú:** `SHOW_ACCOUNT` en `build.py`. Actívalo cuando el correo con el código salga por un SMTP propio (el de Supabase de fábrica solo envía unos pocos correos por hora y solo a miembros de la organización).
+- **Claves:** la URL y la clave `anon` van en `js/zona.js` y `js/catalog.js` (son públicas). La clave de servicio y la contraseña de la base de datos solo están en `.env.local` (no se sube a git).
+- **Botones «Únete gratis» / «Entrar» / «Mis cursos» del menú:** `SHOW_JOIN` en `build.py`. Actívalo cuando el correo con el código salga por un SMTP propio (el de fábrica de Supabase solo envía unos pocos correos por hora y solo a miembros de la organización).
