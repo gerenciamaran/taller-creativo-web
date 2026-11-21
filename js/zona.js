@@ -81,6 +81,16 @@
     fill.style.width = pct + "%";
     return el("div", { class: "bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(pct) }, [fill]);
   }
+  function human(bytes) {
+    if (!bytes) return "";
+    return bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 1073741824 ? 0 : 1) + " MB" : Math.round(bytes / 1024) + " KB";
+  }
+  function signedVideo(path, seconds) {
+    return sb.storage.from("videos").createSignedUrl(path, seconds || 7200).then(function (r) {
+      if (r.error || !r.data) throw new Error("No se pudo abrir el video. Inténtalo de nuevo.");
+      return r.data.signedUrl;
+    });
+  }
   function waLink(text) { return "https://wa.me/573102454446?text=" + encodeURIComponent(text); }
 
   // ---------- /entrar ----------
@@ -168,27 +178,58 @@
         (res[1].data || []).forEach(function (p) { done[p.course_slug] = (done[p.course_slug] || 0) + 1; });
         if (mine.length === 0) return show($("empty"), true);
         var list = $("courses");
+        var cards = [];
+        function status(d, total) { return d === 0 ? "sin-empezar" : (d >= total && total ? "completados" : "en-curso"); }
+        function progressText(d, total) {
+          if (d === 0) return "No has completado ninguna lección de la guía";
+          if (d >= total && total) return "¡Has completado la guía! Felicitaciones";
+          if (d === 1) return "¡Has completado tu primera lección! Continúa tu aprendizaje";
+          return "Llevas " + d + " de " + total + " lecciones. ¡Sigue así!";
+        }
         mine.forEach(function (e) {
           var slug = e.course_slug, c = COURSES[slug], total = totalLessons(slug), d = Math.min(done[slug] || 0, total);
-          var cover = el("div", { class: "mc-cover " + c.grad });
-          cover.innerHTML = c.icon;
-          var pdfBtn = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "Descargar PDF" });
+          var href = "/curso?g=" + slug;
+          var cover = el("a", { class: "dm-cover " + (c.cover ? "" : c.grad), href: href, "aria-label": "Abrir " + c.title });
+          if (c.cover) cover.appendChild(el("img", { src: c.cover, alt: "", loading: "lazy", width: "960", height: "504" }));
+          else cover.innerHTML = c.icon;
+          var line = el("span", {});
+          line.style.width = (total ? Math.round((d * 100) / total) : 0) + "%";
+          var pdfBtn = el("button", { class: "dm-link", type: "button", text: "Descargar PDF" });
           pdfBtn.addEventListener("click", function () {
             pdfBtn.disabled = true;
             openPdf(slug, true).catch(function (err) { setMsg(err.message, "err"); }).then(function () { pdfBtn.disabled = false; });
           });
-          list.appendChild(el("article", { class: "mc" }, [
+          var card = el("article", { class: "dm-card" }, [
             cover,
-            el("div", { class: "mc-body" }, [
-              el("h2", { text: c.title }),
-              el("p", { class: "muted", text: d + " de " + total + " lecciones" + (d === total && total ? " · ¡completada!" : "") }),
-              bar(d, total),
-              el("div", { class: "mc-actions" }, [
-                el("a", { class: "btn btn-sm", href: "/curso?g=" + slug, text: d ? "Continuar" : "Empezar" }),
-                pdfBtn
+            el("div", { class: "dm-body" }, [
+              el("span", { class: "dm-tag", text: c.cat }),
+              el("h2", {}, [el("a", { href: href, text: c.title })]),
+              el("p", { class: "dm-by", text: "Una guía de Academia Taller Creativo" }),
+              el("div", { class: "dm-progress" }, [
+                el("div", { class: "dm-line", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(total ? Math.round((d * 100) / total) : 0) }, [line]),
+                el("p", { class: "dm-ptext", text: progressText(d, total) })
+              ]),
+              el("div", { class: "dm-actions" }, [
+                el("a", { class: "btn dm-start", href: href, text: d >= total && total ? "Repasar →" : d ? "Continuar →" : "Empezar →" }),
+                pdfBtn,
+                el("span", { class: "dm-link soon", title: "Muy pronto", text: "Certificado · pronto" })
               ])
             ])
-          ]));
+          ]);
+          card.setAttribute("data-status", status(d, total));
+          cards.push(card);
+          list.appendChild(card);
+        });
+        var empty = el("p", { class: "muted", hidden: "", text: "No tienes guías en esta categoría." });
+        list.appendChild(empty);
+        $("course-filter").addEventListener("change", function () {
+          var f = $("course-filter").value, n = 0;
+          cards.forEach(function (card) {
+            var on = f === "todos" || card.getAttribute("data-status") === f;
+            card.hidden = !on;
+            if (on) n += 1;
+          });
+          empty.hidden = n > 0;
         });
       });
     });
@@ -207,12 +248,15 @@
 
       Promise.all([
         sb.from("enrollments").select("course_slug").eq("email", email).eq("course_slug", slug).maybeSingle(),
-        sb.from("lesson_progress").select("lesson_key").eq("course_slug", slug)
+        sb.from("lesson_progress").select("lesson_key").eq("course_slug", slug),
+        sb.from("lesson_videos").select("lesson_key,video_path").eq("course_slug", slug)
       ]).then(function (res) {
         show($("loading"), false);
         if (res[0].error || !res[0].data) return show($("denied"), true);
         var done = {};
         (res[1].data || []).forEach(function (p) { done[p.lesson_key] = true; });
+        var videos = {};
+        (res[2].data || []).forEach(function (v) { videos[v.lesson_key] = v.video_path; });
         var total = totalLessons(slug);
         $("c-title").textContent = c.title;
         $("c-cover").className = "mc-cover " + c.grad;
@@ -265,14 +309,32 @@
                 paint();
               });
             });
+            var slot = el("div", { class: "video-slot" });
+            if (videos[key]) {
+              var play = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "▶ Ver el video de esta lección" });
+              play.addEventListener("click", function () {
+                play.disabled = true;
+                play.textContent = "Cargando video…";
+                signedVideo(videos[key]).then(function (url) {
+                  var v = el("video", { controls: "", playsinline: "", preload: "metadata", controlsList: "nodownload", disablepictureinpicture: "", src: url });
+                  v.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+                  v.addEventListener("ended", function () { if (!input.checked) input.click(); });
+                  slot.textContent = "";
+                  slot.appendChild(v);
+                  v.play().catch(function () {});
+                }).catch(function (e) { play.disabled = false; play.textContent = "▶ Ver el video de esta lección"; setMsg(e.message, "err"); });
+              });
+              slot.appendChild(play);
+            }
             ul.appendChild(el("li", {}, [
               el("label", { for: input.id }, [
                 input,
                 el("span", { class: "les-main" }, [
-                  el("span", { class: "les-name", text: l.t }),
+                  el("span", { class: "les-name", text: l.t + (videos[key] ? "  🎬" : "") }),
                   el("span", { class: "les-do" }, [el("b", { text: "Ejercicio: " }), l.e])
                 ])
-              ])
+              ]),
+              slot
             ]));
           });
           det.appendChild(ul);
@@ -349,6 +411,7 @@
             render();
           });
         }
+        initVideoPanel();
         $("filter").addEventListener("input", render);
         $("form-grant").addEventListener("submit", function (ev) {
           ev.preventDefault();
@@ -371,6 +434,77 @@
         load();
       });
     });
+  }
+
+  // Panel «Videos de las lecciones» (solo administradores): sube, reemplaza, abre y quita el video de cada lección.
+  function initVideoPanel() {
+    var sel = $("v-slug"), host = $("v-list");
+    SLUGS.forEach(function (s) { sel.appendChild(el("option", { value: s, text: courseTitle(s) })); });
+    var MAX = 2 * 1024 * 1024 * 1024, TYPES = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
+
+    function render() {
+      var slug = sel.value;
+      host.textContent = "Cargando…";
+      sb.from("lesson_videos").select("lesson_key,video_path,file_name,size_bytes").eq("course_slug", slug).then(function (r) {
+        if (r.error) { host.textContent = ""; return setMsg(r.error.message, "err"); }
+        var by = {};
+        (r.data || []).forEach(function (v) { by[v.lesson_key] = v; });
+        host.textContent = "";
+        COURSES[slug].modules.forEach(function (m, mi) {
+          host.appendChild(el("h3", { class: "vmod", text: (mi + 1) + ". " + m.title }));
+          m.lessons.forEach(function (l, li) {
+            var key = (mi + 1) + "." + (li + 1), v = by[key];
+            var status = el("span", { class: "vstatus" + (v ? " has" : ""), text: v ? "Con video · " + (v.file_name || "") + (v.size_bytes ? " · " + human(v.size_bytes) : "") : "Sin video" });
+            var file = el("input", { type: "file", accept: "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov", hidden: "" });
+            var up = el("button", { class: "btn btn-sm", type: "button", text: v ? "Reemplazar" : "Subir video" });
+            up.addEventListener("click", function () { file.click(); });
+            file.addEventListener("change", function () {
+              var f = file.files && file.files[0];
+              if (!f) return;
+              var ext = TYPES[f.type] || (f.name.split(".").pop() || "").toLowerCase();
+              if (!TYPES[f.type] && ["mp4", "webm", "mov"].indexOf(ext) === -1) { file.value = ""; return setMsg("El video debe ser MP4, WebM o MOV.", "err"); }
+              if (f.size > MAX) { file.value = ""; return setMsg("El video pesa más de 2 GB.", "err"); }
+              var path = slug + "/" + key + "-" + Date.now() + "." + ext;
+              up.disabled = true;
+              up.textContent = "Subiendo… no cierres la página";
+              setMsg("");
+              sb.storage.from("videos").upload(path, f, { contentType: f.type || "video/" + (ext === "mov" ? "quicktime" : ext), upsert: false }).then(function (u) {
+                if (u.error) throw u.error;
+                return sb.from("lesson_videos").upsert({ course_slug: slug, lesson_key: key, video_path: path, file_name: f.name.slice(0, 200), size_bytes: f.size });
+              }).then(function (w) {
+                if (w.error) { sb.storage.from("videos").remove([path]); throw w.error; }
+                if (v && v.video_path && v.video_path !== path) sb.storage.from("videos").remove([v.video_path]);
+                setMsg("Video guardado en la lección " + key + ".", "ok");
+                render();
+              }).catch(function (e) {
+                up.disabled = false;
+                up.textContent = v ? "Reemplazar" : "Subir video";
+                setMsg((e && e.message) || "No se pudo subir el video.", "err");
+              });
+            });
+            var actions = el("div", { class: "vactions" }, [up, file]);
+            if (v) {
+              var view = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "Ver" });
+              view.addEventListener("click", function () { signedVideo(v.video_path, 600).then(function (u) { window.open(u, "_blank", "noopener"); }).catch(function (e) { setMsg(e.message, "err"); }); });
+              var del = el("button", { class: "btn btn-sm btn-ghost", type: "button", text: "Quitar" });
+              del.addEventListener("click", function () {
+                if (!window.confirm("¿Quitar el video de la lección " + key + "? Los alumnos dejarán de verlo.")) return;
+                sb.from("lesson_videos").delete().eq("course_slug", slug).eq("lesson_key", key).then(function (d) {
+                  if (d.error) return setMsg(d.error.message, "err");
+                  sb.storage.from("videos").remove([v.video_path]);
+                  render();
+                });
+              });
+              actions.appendChild(view);
+              actions.appendChild(del);
+            }
+            host.appendChild(el("div", { class: "vrow" }, [el("div", { class: "vinfo" }, [el("b", { text: key + " " + l.t.replace(/^[0-9.]+\s*/, "") }), status]), actions]));
+          });
+        });
+      });
+    }
+    sel.addEventListener("change", render);
+    render();
   }
 
   if (page === "entrar") initLogin();

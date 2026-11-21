@@ -564,7 +564,8 @@ def build_cursos_js():
     data = {}
     for c in COURSES:
         data[c["slug"]] = {
-            "title": c["title"], "grad": c["grad"], "icon": ICON[c["slug"]],
+            "title": c["title"], "grad": c["grad"], "icon": ICON[c["slug"]], "cat": c["cat"],
+            "cover": f"/img/curso-{c['slug']}.jpg" if os.path.exists(os.path.join(ROOT, "img", f"curso-{c['slug']}.jpg")) else "",
             "modules": [{"title": name, "lessons": [{"t": t, "e": p} for t, p in lessons]} for name, lessons in c["modules"]],
         }
     write("js/cursos.js", "window.TC_COURSES = " + json.dumps(data, ensure_ascii=False) + ";\n")
@@ -605,9 +606,17 @@ def build_zona():
 </main>""")
     zona_page("mis-cursos.html", "/mis-cursos", "Mis cursos · Academia Taller Creativo", "mis-cursos", """<main class="zona">
   <div class="wrap">
-    <div class="zona-head">
-      <div><p class="crumbs">Zona de alumnos</p><h1>Mis cursos</h1><p class="muted" id="who"></p></div>
+    <div class="zona-head dm-head">
+      <div><h1>Mis cursos</h1><p class="muted" id="who"></p></div>
       <div class="zona-actions">
+        <label class="dm-filter"><span class="sr">Filtrar mis cursos</span>
+          <select id="course-filter">
+            <option value="todos">Todos mis cursos</option>
+            <option value="en-curso">En curso</option>
+            <option value="sin-empezar">Sin empezar</option>
+            <option value="completados">Completados</option>
+          </select>
+        </label>
         <a id="admin-link" class="btn btn-sm btn-ghost" href="/admin" hidden>Administrar alumnos</a>
         <button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button>
       </div>
@@ -679,6 +688,13 @@ def build_zona():
           </div>
           <button class="btn" type="submit">Dar acceso</button>
         </form>
+      </section>
+      <section class="panel" id="videos-panel">
+        <h2>Videos de las lecciones</h2>
+        <p class="muted">Sube el video de cada lección (MP4, WebM o MOV, hasta 2 GB; lo ideal es MP4 en 720p). Los alumnos que tienen la guía lo ven dentro de la lección.</p>
+        <label for="v-slug">Guía</label>
+        <select id="v-slug"></select>
+        <div id="v-list"></div>
       </section>
       <section class="panel">
         <div class="panel-head"><h2>Alumnos con acceso <span class="muted" id="count"></span></h2><input id="filter" type="search" placeholder="Buscar por correo" aria-label="Buscar por correo"></div>

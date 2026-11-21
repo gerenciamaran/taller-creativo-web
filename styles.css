@@ -554,3 +554,46 @@ h2.left { text-align: left; margin-top: 0; }
 [hidden] { display: none !important; }
 .zona h1, .zona h2, .zona h3 { text-align: left; }
 .auth-card h1 { text-align: left; }
+
+/* Videos de las lecciones */
+.video-slot { padding: 0 4px 14px 42px; }
+.video-slot video { width: 100%; max-height: 70vh; border-radius: 14px; background: #000; display: block; }
+.vmod { font-size: 1rem; margin: 22px 0 6px; color: var(--navy); }
+.vrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 10px 0; }
+.vinfo { display: flex; flex-direction: column; min-width: 0; flex: 1 1 260px; }
+.vstatus { color: var(--ink-soft); font-size: .88rem; overflow-wrap: anywhere; }
+.vstatus.has { color: #0E6B5C; font-weight: 600; }
+.vactions { display: flex; gap: 8px; flex-wrap: wrap; }
+.vactions .btn { margin-top: 0; }
+
+/* Mis cursos: tarjetas grandes con portada */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dm-head { align-items: flex-end; margin-bottom: 28px; }
+.dm-head h1 { font-size: clamp(2rem, 4.5vw, 3rem); }
+.dm-filter select { appearance: none; -webkit-appearance: none; border: 0; border-bottom: 3px solid var(--navy); background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2314285A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 4px center; padding: 8px 30px 8px 4px; font: inherit; font-weight: 600; color: var(--navy); cursor: pointer; }
+.dm-filter select:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.mycourses { display: flex; flex-direction: column; gap: 24px; }
+.dm-card { display: grid; grid-template-columns: minmax(260px, 448px) 1fr; gap: 32px; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+.dm-cover { display: grid; place-items: center; aspect-ratio: 960 / 504; border-radius: 4px; overflow: hidden; background: var(--sand); }
+.dm-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dm-cover svg { width: 90px; height: 90px; }
+.dm-body { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.dm-tag { align-self: flex-start; background: var(--yellow); color: var(--navy); font-weight: 700; font-size: .75rem; letter-spacing: .02em; text-transform: uppercase; padding: 3px 9px; border-radius: 4px; margin-bottom: 8px; }
+.dm-body h2 { font-size: clamp(1.3rem, 2.6vw, 1.9rem); margin: 0 0 4px; line-height: 1.2; }
+.dm-body h2 a { color: var(--navy); text-decoration: none; }
+.dm-body h2 a:hover { text-decoration: underline; }
+.dm-by { color: var(--ink-soft); margin: 0 0 22px; font-size: 1.05rem; }
+.dm-progress { max-width: 600px; margin-bottom: 22px; }
+.dm-line { height: 3px; background: #D8EFEA; border-radius: 3px; overflow: hidden; }
+.dm-line span { display: block; height: 100%; background: var(--teal); border-radius: 3px; transition: width .3s ease; }
+.dm-ptext { margin: 14px 0 0; color: var(--navy); font-size: .98rem; }
+.dm-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 22px; }
+.dm-start { border-radius: 4px; padding: 11px 20px; font-size: 1rem; }
+.dm-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--navy); cursor: pointer; white-space: nowrap; }
+.dm-link:hover { text-decoration: underline; }
+.dm-link:disabled { opacity: .6; cursor: default; }
+.dm-link.soon { color: var(--ink-soft); font-weight: 500; cursor: default; }
+.dm-link.soon:hover { text-decoration: none; }
+@media (max-width: 760px) {
+  .dm-card { grid-template-columns: 1fr; gap: 18px; padding: 16px; }
+}

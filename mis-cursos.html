@@ -43,9 +43,17 @@
 
 <main class="zona">
   <div class="wrap">
-    <div class="zona-head">
-      <div><p class="crumbs">Zona de alumnos</p><h1>Mis cursos</h1><p class="muted" id="who"></p></div>
+    <div class="zona-head dm-head">
+      <div><h1>Mis cursos</h1><p class="muted" id="who"></p></div>
       <div class="zona-actions">
+        <label class="dm-filter"><span class="sr">Filtrar mis cursos</span>
+          <select id="course-filter">
+            <option value="todos">Todos mis cursos</option>
+            <option value="en-curso">En curso</option>
+            <option value="sin-empezar">Sin empezar</option>
+            <option value="completados">Completados</option>
+          </select>
+        </label>
         <a id="admin-link" class="btn btn-sm btn-ghost" href="/admin" hidden>Administrar alumnos</a>
         <button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button>
       </div>

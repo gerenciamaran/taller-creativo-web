@@ -18,3 +18,7 @@ content_path = "./supabase/templates/codigo.html"
 [auth.email.template.magic_link]
 subject = "Tu código para entrar a Academia Taller Creativo"
 content_path = "./supabase/templates/codigo.html"
+
+[storage]
+# Tamaño máximo por archivo en todo el proyecto (los videos de las lecciones). El bucket «videos» tiene su propio tope de 2 GB.
+file_size_limit = "2GiB"
