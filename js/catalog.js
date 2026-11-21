@@ -116,7 +116,7 @@
   // ---------- dibujo: tarjetas del catálogo ----------
   function topHtml(c, cls, href, label) {
     var cover = TC.coverUrl(c);
-    var inner = cover ? '<img src="' + esc(cover) + '" alt="" loading="lazy" width="960" height="504">' : TC.icon(c.slug);
+    var inner = cover ? '<img src="' + esc(cover) + '" alt="Portada de la guía ' + esc(c.title) + '" loading="lazy" width="960" height="504">' : TC.icon(c.slug);
     return '<a class="' + cls + (cover ? " has-cover" : " " + esc(c.grad)) + '" href="' + href + '" aria-label="' + esc(label) + '">' + inner + "</a>";
   }
   function courseCard(c) {
@@ -177,7 +177,7 @@
       "<h1>" + esc(c.title) + '</h1><p class="lead">' + esc(c.promise) + "</p>" +
       (c.who ? '<p class="who"><b>¿Para quién es?</b> ' + esc(c.who) + "</p>" : "") +
       '<ul class="ticks"><li>Paso a paso, sin experiencia previa</li><li>Ejercicio práctico al final de cada lección</li><li>Acceso inmediato tras el pago · Garantía de 7 días</li></ul></div>' +
-      '<aside class="buybox"><div class="buybox-cover ' + (cover ? "has-cover" : esc(c.grad)) + '">' + (cover ? '<img src="' + esc(cover) + '" alt="">' : TC.icon(c.slug)) + "</div>" +
+      '<aside class="buybox"><div class="buybox-cover ' + (cover ? "has-cover" : esc(c.grad)) + '">' + (cover ? '<img src="' + esc(cover) + '" alt="Portada de la guía ' + esc(c.title) + '">' : TC.icon(c.slug)) + "</div>" +
       '<div class="currency small" role="group" aria-label="Moneda"><button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button><button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button></div>' +
       '<div class="buybox-price">' + TC.priceEl(c.price_cop, c.price_usd, "b") + "<span>Acceso de por vida</span></div>" + buy +
       '<p class="buybox-deal">Con 2 o más guías pagas menos por cada una. <a href="/#paquetes">Ver paquetes</a></p>' +
@@ -194,7 +194,7 @@
       '<div class="buybar"><div class="buybar-in"><div class="buybar-price"><small>' + esc(c.title) + "</small>" + TC.priceEl(c.price_cop, c.price_usd, "b") +
       '</div><button type="button" class="btn" data-add="' + esc(c.slug) + '" data-label="Agregar"><span class="lbl">Agregar</span></button></div></div>';
 
-    var title = c.title + " · Guía en PDF · Academia Taller Creativo";
+    var title = c.title + ": guía en PDF paso a paso | Taller Creativo";
     var desc = ((c.promise || c.short || "") + " " + c.n_mod + " módulos, " + c.n_les + " lecciones. Acceso inmediato y garantía de 7 días.").trim();
     document.title = title;
     setMeta('meta[name="description"]', "content", desc);
@@ -202,15 +202,30 @@
     setMeta('meta[property="og:description"]', "content", desc);
     setMeta('link[rel="canonical"]', "href", "https://tallercreativo.com.co/guias/" + c.slug);
     setMeta('meta[property="og:url"]', "content", "https://tallercreativo.com.co/guias/" + c.slug);
-    if (cover) setMeta('meta[property="og:image"]', "content", cover);
-    var ld = document.createElement("script");
-    ld.type = "application/ld+json";
-    ld.textContent = JSON.stringify({
-      "@context": "https://schema.org", "@type": "Product", name: c.title + " · Academia Taller Creativo", description: c.promise || c.short || "",
-      brand: { "@type": "Brand", name: "Academia Taller Creativo" }, image: cover || "https://tallercreativo.com.co/img/logo-completo.png",
-      offers: { "@type": "Offer", priceCurrency: "COP", price: String(c.price_cop), availability: "https://schema.org/InStock", url: "https://tallercreativo.com.co/guias/" + c.slug }
-    });
-    document.head.appendChild(ld);
+    var url = "https://tallercreativo.com.co/guias/" + c.slug;
+    var img = cover || "https://tallercreativo.com.co/img/og-taller-creativo.jpg";
+    setMeta('meta[property="og:image"]', "content", img);
+    setMeta('meta[name="twitter:image"]', "content", img);
+    setMeta('meta[name="twitter:title"]', "content", title);
+    setMeta('meta[name="twitter:description"]', "content", desc);
+    // Las páginas fijas (generadas con build.py) ya traen sus datos estructurados; solo se crean para cursos nuevos.
+    var old = document.getElementById("ld-course");
+    if (!old || !String(old.textContent).includes('"' + url + '"')) {
+      if (old) old.remove();
+      var offer = { "@type": "Offer", url: url, priceCurrency: "COP", price: String(Math.round(c.price_cop)), availability: "https://schema.org/InStock", category: "Paid" };
+      var ld = document.createElement("script");
+      ld.type = "application/ld+json";
+      ld.id = "ld-course";
+      ld.textContent = JSON.stringify({ "@context": "https://schema.org", "@graph": [
+        { "@type": "Course", name: c.title, description: c.promise || c.short || "", url: url, image: img, inLanguage: "es", educationalLevel: "Principiante", courseMode: "online", isAccessibleForFree: false,
+          provider: { "@type": "Organization", name: "Academia Taller Creativo", url: "https://tallercreativo.com.co" }, teaches: c.learn || [], offers: offer },
+        { "@type": "Product", name: c.title + " (guía en PDF)", description: c.promise || c.short || "", image: img, brand: { "@type": "Brand", name: "Academia Taller Creativo" }, offers: offer },
+        { "@type": "BreadcrumbList", itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Inicio", item: "https://tallercreativo.com.co/" },
+          { "@type": "ListItem", position: 2, name: "Guías", item: "https://tallercreativo.com.co/#guias" },
+          { "@type": "ListItem", position: 3, name: c.title, item: url }] }] });
+      document.head.appendChild(ld);
+    }
   }
 
   // ---------- dibujo: portada ----------

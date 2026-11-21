@@ -232,7 +232,13 @@ e = html.escape
 
 
 # ------------------------------------------------------------- parciales ----
-def head(title, desc, path, extra=""):
+def head(title, desc, path, extra="", image=None, keywords=""):
+    """<head> común: título, descripción, canónica, Open Graph, Twitter y robots (salvo páginas noindex)."""
+    img = image or f"{SITE}/img/og-taller-creativo.jpg"
+    dims = '  <meta property="og:image:width" content="1200">\n  <meta property="og:image:height" content="630">\n' if not image else ""
+    kw = f'  <meta name="keywords" content="{e(keywords)}">\n' if keywords else ""
+    robots = "" if "noindex" in extra else '  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">\n'
+    alt = "Academia Taller Creativo: guías de dibujo, pintura, jabones y velas artesanales" if not image else title
     return f"""<!doctype html>
 <html lang="es">
 <head>
@@ -240,17 +246,26 @@ def head(title, desc, path, extra=""):
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{e(title)}</title>
   <meta name="description" content="{e(desc)}">
+{kw}{robots}  <meta name="author" content="Academia Taller Creativo">
   <link rel="canonical" href="{SITE}{path}">
+  <meta property="og:site_name" content="Academia Taller Creativo">
+  <meta property="og:locale" content="es_CO">
   <meta property="og:title" content="{e(title)}">
   <meta property="og:description" content="{e(desc)}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="{SITE}{path}">
-  <meta property="og:image" content="{SITE}/img/logo-completo.png">
+  <meta property="og:image" content="{e(img)}">
+{dims}  <meta property="og:image:alt" content="{e(alt)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{e(title)}">
+  <meta name="twitter:description" content="{e(desc)}">
+  <meta name="twitter:image" content="{e(img)}">
   <meta name="theme-color" content="#14285A">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="/img/favicon.png">
+  <link rel="apple-touch-icon" href="/img/logo-marca.png">
   <link rel="stylesheet" href="/styles.css">
 {extra}</head>
 <body>
@@ -341,14 +356,244 @@ def write(rel, text):
         f.write(text)
 
 
+
+# ------------------------------------------------- catálogo (para el HTML) ---
+# Al construir el sitio se lee lo publicado en Supabase (lectura pública) y se deja ya escrito en el HTML: tarjetas,
+# paquetes, una página por curso y datos estructurados. Así Google ve el contenido sin ejecutar JavaScript. En el
+# navegador js/catalog.js lo vuelve a pintar con lo último de la base. Un curso nuevo funciona al instante por la
+# plantilla guia.html; al volver a ejecutar `python build.py` y subirlo, también queda como página fija.
+CAT_SELECT = ("courses?select=slug,title,category,short,promise,who,bullets,learn,extras,kit,grad,cover_path,price_cop,price_usd,"
+              "sort_order,updated_at,course_modules(id,position,title,course_lessons(id,position,title,exercise))"
+              "&status=eq.publicado&order=sort_order.asc")
+_CAT = None
+
+
+def fetch_catalog():
+    global _CAT
+    if _CAT is not None:
+        return _CAT
+    _CAT = {"ok": False, "courses": [], "bundles": [], "url": ""}
+    import urllib.request
+    try:
+        src = open(os.path.join(ROOT, "js", "catalog.js"), encoding="utf-8").read()
+        url = re.search(r'URL_BASE = "([^"]+)"', src).group(1)
+        key = re.search(r'ANON = "([^"]+)"', src).group(1)
+
+        def get(path):
+            req = urllib.request.Request(url + "/rest/v1/" + path, headers={"apikey": key, "Authorization": "Bearer " + key})
+            return json.loads(urllib.request.urlopen(req, timeout=20).read())
+
+        courses = get(CAT_SELECT)
+        bundles = get("bundles?select=id,code,name,description,slugs,price_cop,price_usd,featured,sort_order&active=eq.true&order=sort_order.asc")
+        for c in courses:
+            c["modules"] = [{"title": m["title"], "lessons": sorted(m["course_lessons"], key=lambda x: x["position"])}
+                            for m in sorted(c.pop("course_modules"), key=lambda x: x["position"])]
+            c["n_mod"] = len(c["modules"])
+            c["n_les"] = sum(len(m["lessons"]) for m in c["modules"])
+        _CAT.update(ok=bool(courses), courses=courses, bundles=bundles, url=url)
+    except Exception as ex:
+        print("AVISO: no se pudo leer el catálogo de la base; se deja el HTML sin pre-render (", ex, ")")
+    return _CAT
+
+
+def money(n, cur):
+    n = float(n)
+    if cur == "usd":
+        return f"US${int(n)}" if n == int(n) else f"US${n:.2f}".replace(".", ",")
+    return "COP $" + f"{round(n):,}".replace(",", ".")
+
+
+def price_el(cop, usd, tag="span", cls="price"):
+    return f'<{tag} class="{cls}" data-cop="{e(money(cop, "cop"))}" data-usd="{e(money(usd, "usd"))}">{e(money(cop, "cop"))}</{tag}>'
+
+
+def cover_url(c):
+    if not c.get("cover_path"):
+        return ""
+    from urllib.parse import quote
+    return f"{_CAT['url']}/storage/v1/object/public/covers/{quote(c['cover_path'])}"
+
+
+def course_icon(slug):
+    return ICON.get(slug) or '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4l3.5 7.5L28 12.6l-6 5.7 1.5 8.4L16 22.6 8.5 26.7 10 18.3 4 12.6l8.5-1.1z" fill="#FFC93C"/></svg>'
+
+
+def card_html(c):
+    href = f"/guias/{c['slug']}"
+    cover = cover_url(c)
+    inner = (f'<img src="{e(cover)}" alt="Portada de la guía {e(c["title"])}" loading="lazy" width="960" height="504">' if cover else course_icon(c["slug"]))
+    top = f'<a class="guia-top {"has-cover" if cover else e(c["grad"])}" href="{href}" aria-label="Ver {e(c["title"])}">{inner}</a>'
+    lis = "".join(f"<li>{e(b)}</li>" for b in (c.get("bullets") or []))
+    return (f'<article class="guia">{top}<div class="guia-body"><span class="tag">{c["n_mod"]} módulos · {c["n_les"]} lecciones</span>'
+            f'<h3><a href="{href}">{e(c["title"])}</a></h3><p>{e(c["short"] or "")}</p><ul>{lis}</ul>'
+            f'<div class="guia-foot">{price_el(c["price_cop"], c["price_usd"], "b", "price big")}'
+            f'<div class="guia-actions"><a class="btn btn-sm btn-ghost" href="{href}">Ver guía</a>'
+            f'<button type="button" class="btn btn-sm" data-add="{e(c["slug"])}" data-label="Agregar"><span class="lbl">Agregar</span></button></div></div></div></article>')
+
+
+def pack_html(b, by_slug):
+    cop = usd = 0
+    icons = ""
+    for sl in b["slugs"]:
+        c = by_slug.get(sl)
+        if c:
+            cop += float(c["price_cop"])
+            usd += float(c["price_usd"])
+        icons += f'<span class="cat-ico mini">{course_icon(sl)}</span>'
+    save_cop = max(0, cop - float(b["price_cop"]))
+    save_usd = max(0, usd - float(b["price_usd"]))
+    out = f'<article class="pack{" featured" if b["featured"] else ""}">'
+    out += '<span class="badge-top">MEJOR PRECIO</span>' if b["featured"] else ""
+    out += f'<div class="pack-ico">{icons}</div><h3>{e(b["name"])}</h3><p class="pack-desc">{e(b["description"] or "")}</p>'
+    out += f'<div class="pack-price">{price_el(b["price_cop"], b["price_usd"], "b")}' + (price_el(cop, usd, "s") if cop > float(b["price_cop"]) else "") + "</div>"
+    out += f'<p class="pack-save">Ahorras {price_el(save_cop, save_usd)}</p>' if save_cop > 0 else ""
+    out += f'<button type="button" class="btn btn-block" data-add-pack="{e(",".join(b["slugs"]))}">Agregar al carrito</button></article>'
+    return out
+
+
+def course_title(c):
+    return f'{c["title"]}: guía en PDF paso a paso | Taller Creativo'
+
+
+def course_desc(c):
+    return f'{(c.get("promise") or c.get("short") or "").strip()} {c["n_mod"]} módulos, {c["n_les"]} lecciones. Acceso inmediato y garantía de 7 días.'.strip()
+
+
+def course_keywords(c):
+    cat = (c.get("category") or c["title"]).lower()
+    return f'{c["title"]}, guía de {cat} en PDF, curso de {cat} desde cero, aprender {cat} paso a paso, {cat} para principiantes, Taller Creativo'
+
+
+def course_body(c, others):
+    """Misma estructura que pinta js/catalog.js, para que Google lea el contenido sin JavaScript."""
+    cover = cover_url(c)
+    ul = lambda arr: "".join(f"<li>{e(x)}</li>" for x in (arr or []))
+    mods = ""
+    for i, m in enumerate(c["modules"]):
+        lessons = "".join(f'<li><span class="les-name">{e(l["title"])}</span>' + (f'<span class="les-do"><b>Ejercicio:</b> {e(l["exercise"])}</span>' if l.get("exercise") else "") + "</li>" for l in m["lessons"])
+        mods += (f'<details class="mod"{" open" if i == 0 else ""}><summary><span class="mod-num">{i + 1}</span><span class="mod-title">{e(m["title"])}</span>'
+                 f'<span class="mod-count">{len(m["lessons"])} lecciones</span></summary><ul class="lessons">{lessons}</ul></details>')
+    more = ""
+    for o in others:
+        oc = cover_url(o)
+        top = f'<span class="more-top {"has-cover" if oc else e(o["grad"])}">' + (f'<img src="{e(oc)}" alt="Portada de la guía {e(o["title"])}">' if oc else course_icon(o["slug"])) + "</span>"
+        more += f'<a class="more-card" href="/guias/{e(o["slug"])}">{top}<span class="more-body"><b>{e(o["title"])}</b>{price_el(o["price_cop"], o["price_usd"])}</span></a>'
+    buy = f'<button type="button" class="btn btn-block" data-add="{e(c["slug"])}" data-label="Agregar al carrito"><span class="lbl">Agregar al carrito</span></button>'
+    cover_html = f'<img src="{e(cover)}" alt="Portada de la guía {e(c["title"])}">' if cover else course_icon(c["slug"])
+    out = ('<section class="chero"><div class="wrap chero-in"><div class="chero-copy">'
+           f'<p class="crumbs"><a href="/">Inicio</a> › <a href="/#guias">Guías</a> › {e(c.get("category") or "Guía")}</p>'
+           f'<span class="pill">Guía en PDF · {c["n_mod"]} módulos · {c["n_les"]} lecciones</span>'
+           f'<h1>{e(c["title"])}</h1><p class="lead">{e(c.get("promise") or "")}</p>'
+           + (f'<p class="who"><b>¿Para quién es?</b> {e(c["who"])}</p>' if c.get("who") else "")
+           + '<ul class="ticks"><li>Paso a paso, sin experiencia previa</li><li>Ejercicio práctico al final de cada lección</li><li>Acceso inmediato tras el pago · Garantía de 7 días</li></ul></div>'
+           f'<aside class="buybox"><div class="buybox-cover {"has-cover" if cover else e(c["grad"])}">{cover_html}</div>'
+           '<div class="currency small" role="group" aria-label="Moneda"><button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button><button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button></div>'
+           f'<div class="buybox-price">{price_el(c["price_cop"], c["price_usd"], "b")}<span>Acceso de por vida</span></div>{buy}'
+           '<p class="buybox-deal">Con 2 o más guías pagas menos por cada una. <a href="/#paquetes">Ver paquetes</a></p>'
+           '<ul class="buybox-list"><li>Guía completa en PDF</li><li>Plantillas y ejercicios extra</li><li>Certificado digital</li><li>Garantía de 7 días</li></ul></aside></div></section>'
+           '<section class="section"><div class="wrap two-col"><div>'
+           + (f'<h2 class="left">Lo que aprenderás</h2><ul class="learn">{ul(c.get("learn"))}</ul>' if c.get("learn") else "")
+           + f'<h2 class="left">Contenido de la guía</h2><p class="sub left">{c["n_mod"]} módulos · {c["n_les"]} lecciones, cada una con su ejercicio.</p><div class="mods">{mods}</div></div><div class="side">'
+           + (f'<div class="side-card"><h3>Qué incluye</h3><ul class="checks-sm">{ul(c.get("extras"))}</ul></div>' if c.get("extras") else "")
+           + (f'<div class="side-card"><h3>Para empezar necesitas</h3><ul class="checks-sm">{ul(c.get("kit"))}</ul><p class="mini">La guía te dice qué comprar según tu presupuesto. No necesitas experiencia previa.</p></div>' if c.get("kit") else "")
+           + '<div class="side-card soft"><h3>Entrega</h3><p>Apenas se confirma el pago recibes acceso a la guía en PDF y a sus lecciones en tu zona de alumnos. Si hay videos, los ves ahí mismo.</p></div></div></div></section>'
+           + read("garantia.html") + read("faq.html")
+           + (f'<section class="section"><div class="wrap"><h2>También te puede interesar</h2><div class="more">{more}</div></div></section>' if others else "")
+           + f'<div class="buybar"><div class="buybar-in"><div class="buybar-price"><small>{e(c["title"])}</small>{price_el(c["price_cop"], c["price_usd"], "b")}</div>'
+           '<button type="button" class="btn" data-add="' + e(c["slug"]) + '" data-label="Agregar"><span class="lbl">Agregar</span></button></div></div>')
+    return out
+
+
+def ld_script(data, ident=""):
+    idattr = f' id="{ident}"' if ident else ""
+    return f'  <script type="application/ld+json"{idattr}>{json.dumps(data, ensure_ascii=False)}</script>\n'
+
+
+def faq_pairs():
+    src = read("faq.html")
+    out = []
+    for q, a in re.findall(r"<summary>(.*?)</summary>\s*<p>(.*?)</p>", src, re.S):
+        out.append((html.unescape(re.sub(r"<[^>]+>", "", q)).strip(), html.unescape(re.sub(r"<[^>]+>", "", a)).strip()))
+    return out
+
+
+ORG = {"@type": "Organization", "@id": SITE + "/#org", "name": "Academia Taller Creativo", "url": SITE, "logo": SITE + "/img/logo-marca.png",
+       "image": SITE + "/img/og-taller-creativo.jpg", "slogan": "Aprende, Crea, Emprende",
+       "description": "Academia digital de guías en PDF para aprender dibujo, pintura, jabones y velas artesanales paso a paso y desde cero.",
+       "contactPoint": {"@type": "ContactPoint", "contactType": "customer service", "telephone": "+" + WA, "availableLanguage": "Spanish",
+                        "areaServed": ["CO", "LATAM"]}}
+
+
+def course_ld(c, others_unused=None):
+    url = f"{SITE}/guias/{c['slug']}"
+    img = cover_url(c) or SITE + "/img/og-taller-creativo.jpg"
+    offer = {"@type": "Offer", "url": url, "priceCurrency": "COP", "price": str(round(float(c["price_cop"]))), "availability": "https://schema.org/InStock",
+             "category": "Paid", "seller": {"@id": SITE + "/#org"}}
+    return {"@context": "https://schema.org", "@graph": [
+        ORG,
+        {"@type": "Course", "@id": url + "#course", "name": c["title"], "description": c.get("promise") or c.get("short") or "", "url": url, "image": img,
+         "inLanguage": "es", "educationalLevel": "Principiante", "courseMode": "online", "isAccessibleForFree": False,
+         "provider": {"@id": SITE + "/#org"}, "teaches": c.get("learn") or [], "numberOfCredits": None, "offers": offer},
+        {"@type": "Product", "@id": url + "#product", "name": f'{c["title"]} (guía en PDF)', "description": c.get("promise") or c.get("short") or "", "image": img,
+         "brand": {"@type": "Brand", "name": "Academia Taller Creativo"}, "category": c.get("category") or "Guías en PDF", "offers": offer},
+        {"@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Inicio", "item": SITE + "/"},
+            {"@type": "ListItem", "position": 2, "name": "Guías", "item": SITE + "/#guias"},
+            {"@type": "ListItem", "position": 3, "name": c["title"], "item": url}]}]}
+
+
+def build_course_pages():
+    """guias/<curso>.html: una página fija por curso publicado (contenido, etiquetas y datos estructurados ya escritos)."""
+    cat = fetch_catalog()
+    if not cat["ok"]:
+        return
+    gdir = os.path.join(ROOT, "guias")
+    os.makedirs(gdir, exist_ok=True)
+    keep = set()
+    for c in cat["courses"]:
+        others = [o for o in cat["courses"] if o["slug"] != c["slug"]]
+        data = course_ld(c)
+        for node in data["@graph"]:
+            if "numberOfCredits" in node and node["numberOfCredits"] is None:
+                del node["numberOfCredits"]
+        cover = cover_url(c)
+        img = cover or None
+        body = f"""{head(course_title(c), course_desc(c), "/guias/" + c["slug"], ld_script(data, "ld-course"), img, course_keywords(c))}
+{header(False)}
+<main id="course-root">{course_body(c, others)}</main>
+<template id="course-static">
+{read('garantia.html')}
+{read('faq.html')}
+</template>
+{CART}{footer()}"""
+        write(f"guias/{c['slug']}.html", body)
+        keep.add(c["slug"] + ".html")
+    for f in os.listdir(gdir):
+        if f.endswith(".html") and f not in keep:
+            os.remove(os.path.join(gdir, f))
+
+
 # ---------------------------------------------------------------- portada ---
 def build_index():
+    cat = fetch_catalog()
     cards = '\n        <p class="note" id="guias-loading">Cargando las guías…</p><noscript><p class="note">Activa JavaScript para ver el catálogo de guías.</p></noscript>'
     packs = ""
-    desc = "Guías digitales en PDF, paso a paso y desde cero: dibujo, pintura, jabones y velas artesanales. Desde COP $24.000. Acceso inmediato y garantía de 7 días."
-    ld = json.dumps({"@context": "https://schema.org", "@type": "Organization", "name": "Academia Taller Creativo",
-                     "url": SITE, "logo": SITE + "/img/logo-marca.png"}, ensure_ascii=False)
-    body = f"""{head("Academia Taller Creativo · Guías de dibujo, pintura, jabones y velas", desc, "/", f'  <script type="application/ld+json">{ld}</script>\n')}
+    min_cop = 24000
+    ld_graph = [ORG, {"@type": "WebSite", "@id": SITE + "/#web", "url": SITE, "name": "Academia Taller Creativo", "inLanguage": "es", "publisher": {"@id": SITE + "/#org"}}]
+    if cat["ok"]:
+        by_slug = {c["slug"]: c for c in cat["courses"]}
+        cards = "\n        " + "\n        ".join(card_html(c) for c in cat["courses"])
+        packs = "\n        " + "\n        ".join(pack_html(b, by_slug) for b in cat["bundles"])
+        min_cop = min(float(c["price_cop"]) for c in cat["courses"])
+        ld_graph.append({"@type": "ItemList", "name": "Guías de la Academia Taller Creativo", "itemListElement": [
+            {"@type": "ListItem", "position": i + 1, "url": f"{SITE}/guias/{c['slug']}", "name": c["title"]} for i, c in enumerate(cat["courses"])]})
+    faq = faq_pairs()
+    if faq:
+        ld_graph.append({"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq]})
+    desc = f"Aprende dibujo, pintura, jabones y velas artesanales desde cero con guías en PDF paso a paso. Desde {money(min_cop, 'cop')}, acceso inmediato y garantía de 7 días."
+    kws = ("guías de dibujo, guías de pintura, jabones artesanales, velas artesanales, curso de dibujo desde cero, aprender a pintar, "
+           "cómo hacer jabones, cómo hacer velas, guías en PDF, academia online, manualidades, emprender con manualidades, Taller Creativo")
+    body = f"""{head("Guías de dibujo, pintura, jabones y velas | Taller Creativo", desc, "/", ld_script({"@context": "https://schema.org", "@graph": ld_graph}), None, kws)}
 {header(True)}
 <main id="inicio">
 
@@ -561,10 +806,15 @@ def published_slugs():
 
 
 def build_seo():
-    slugs = published_slugs()
-    urls = ["/"] + [f"/guias/{x}" for x in slugs]
+    cat = fetch_catalog()
+    if cat["ok"]:
+        items = [("/", max(c["updated_at"][:10] for c in cat["courses"]))] + [(f"/guias/{c['slug']}", c["updated_at"][:10]) for c in cat["courses"]]
+    else:
+        items = [("/", None)] + [(f"/guias/{x}", None) for x in published_slugs()]
     sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    sm += "".join(f"  <url><loc>{SITE}{u}</loc></url>\n" for u in urls) + "</urlset>\n"
+    for u, d in items:
+        sm += f"  <url><loc>{SITE}{u}</loc>" + (f"<lastmod>{d}</lastmod>" if d else "") + "</url>\n"
+    sm += "</urlset>\n"
     write("sitemap.xml", sm)
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /entrar\nDisallow: /mis-cursos\nDisallow: /curso\nDisallow: /admin\nSitemap: {SITE}/sitemap.xml\n")
 
@@ -572,6 +822,7 @@ def build_seo():
 if __name__ == "__main__":
     build_index()
     build_guia_template()
+    build_course_pages()
     build_zona()
     build_seo()
     print("OK: index.html, guia.html, zona de alumnos, sitemap")
