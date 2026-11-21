@@ -473,3 +473,84 @@ h2.left { text-align: left; margin-top: 0; }
   .quiz-opts { grid-template-columns: 1fr; }
   .quiz-cta .btn { width: 100%; }
 }
+
+/* ===================== Zona de alumnos ===================== */
+.acct-btn { text-decoration: none; margin-left: auto; }
+@media (min-width: 861px) { .acct-btn { margin-left: 0; } }
+.zona { padding: 40px 0 80px; min-height: 60vh; }
+.zona-narrow { width: min(520px, 100% - 32px); }
+.zona-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.zona-head h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0 0 4px; }
+.zona-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.muted { color: var(--ink-soft); margin: 0; }
+.crumbs { color: var(--ink-soft); font-size: .9rem; margin: 0 0 6px; }
+.crumbs a { color: var(--ink-soft); }
+.auth-card, .panel, .empty { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; }
+.auth-card h1 { font-size: 1.7rem; margin-bottom: .3em; }
+.lead-sm { color: var(--ink-soft); margin: 0 0 20px; }
+.auth-card label, .panel label, .panel legend { display: block; font-weight: 600; margin: 14px 0 6px; font-size: .95rem; }
+.auth-card input, .panel input[type=text], .panel input[type=email], .panel input[type=search], .panel select {
+  width: 100%; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; font: inherit; background: #fff; color: var(--navy);
+}
+.auth-card input:focus, .panel input:focus, .panel select:focus { outline: 3px solid var(--teal); outline-offset: 1px; }
+#code { font-size: 1.6rem; letter-spacing: .35em; text-align: center; font-weight: 700; }
+.auth-card .btn-block { margin-top: 18px; width: 100%; justify-content: center; }
+.sent { margin: 0 0 6px; color: var(--ink-soft); }
+.links { text-align: center; margin: 16px 0 0; color: var(--ink-soft); }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--orange-dark); text-decoration: underline; cursor: pointer; }
+.linkbtn:disabled { color: var(--ink-soft); text-decoration: none; cursor: default; }
+.foot-note { color: var(--ink-soft); font-size: .9rem; margin: 22px 0 0; }
+.msg { margin: 14px 0 0; padding: 12px 14px; border-radius: 12px; font-size: .95rem; }
+.msg.err { background: #FDE8EC; color: #9B1C3A; border: 1px solid #F5B5C3; }
+.msg.ok { background: #E6F6F2; color: #0E6B5C; border: 1px solid #A9DDD2; }
+.msg:not(.err):not(.ok) { background: var(--sand); color: var(--navy); }
+.mycourses { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px; margin-top: 8px; }
+.mc { display: flex; gap: 16px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+.mc-cover { flex: none; width: 84px; height: 84px; border-radius: 18px; display: grid; place-items: center; }
+.mc-cover svg { width: 52px; height: 52px; }
+.mc-body { flex: 1; min-width: 0; }
+.mc-body h2 { font-size: 1.15rem; margin: 0 0 4px; }
+.mc-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.bar { height: 10px; background: var(--sand); border-radius: 999px; overflow: hidden; margin: 10px 0 0; }
+.bar-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--teal), var(--yellow)); border-radius: 999px; transition: width .3s ease; }
+.empty { max-width: 640px; }
+.empty h2 { font-size: 1.3rem; }
+.empty p { color: var(--ink-soft); }
+.reader-head { display: flex; gap: 20px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
+.reader-head .mc-cover { width: 110px; height: 110px; }
+.reader-head .mc-cover svg { width: 68px; height: 68px; }
+.reader-info { flex: 1; min-width: 0; }
+.reader-info h1 { font-size: clamp(1.4rem, 3vw, 2rem); margin: 0 0 4px; }
+.done-banner { background: #E6F6F2; border: 1px solid #A9DDD2; color: #0E6B5C; border-radius: 14px; padding: 14px 16px; font-weight: 600; margin: 0 0 18px; }
+.lessons-check li { padding: 0; }
+.lessons-check label { display: flex; gap: 14px; align-items: flex-start; padding: 14px 4px; cursor: pointer; margin: 0; font-weight: 400; }
+.lessons-check input[type=checkbox] { flex: none; width: 24px; height: 24px; margin-top: 2px; accent-color: var(--teal); cursor: pointer; }
+.les-main { display: flex; flex-direction: column; gap: 4px; }
+.lessons-check input:checked + .les-main .les-name { text-decoration: line-through; opacity: .65; }
+.mod-count { white-space: nowrap; }
+.panel { margin-bottom: 22px; }
+.panel h2 { font-size: 1.25rem; margin-bottom: .3em; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.panel-head input[type=search] { width: min(260px, 100%); }
+.panel fieldset { border: 0; padding: 0; margin: 0; }
+.panel legend { padding: 0; }
+.chks { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.chk { display: flex !important; align-items: center; gap: 8px; margin: 4px 0 !important; font-weight: 500 !important; cursor: pointer; }
+.chk input { width: 20px !important; height: 20px; accent-color: var(--teal); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.panel .btn { margin-top: 18px; }
+.arow { border-top: 1px solid var(--line); padding: 12px 0; }
+.arow-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--sand); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: .88rem; font-weight: 600; }
+.chip-x { width: 22px; height: 22px; border-radius: 50%; border: 0; background: #fff; color: var(--ink-soft); cursor: pointer; line-height: 1; font-size: 1rem; }
+.chip-x:hover { background: var(--pink); color: #fff; }
+@media (max-width: 620px) {
+  .reader-head { flex-direction: column; align-items: flex-start; }
+  .row2 { grid-template-columns: 1fr; }
+  .mc { flex-direction: column; }
+}
+/* Lo marcado como oculto debe quedar oculto aunque otra regla le ponga display. */
+[hidden] { display: none !important; }
+.zona h1, .zona h2, .zona h3 { text-align: left; }
+.auth-card h1 { text-align: left; }

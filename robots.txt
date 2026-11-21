@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /entrar
+Disallow: /mis-cursos
+Disallow: /curso
+Disallow: /admin
 Sitemap: https://tallercreativo.com.co/sitemap.xml

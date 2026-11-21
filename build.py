@@ -21,6 +21,12 @@ ICON = {
 }
 CART_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.6l2-8H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19.5" r="1.5" fill="currentColor"/><circle cx="17" cy="19.5" r="1.5" fill="currentColor"/></svg>'
 WA_SVG = '<svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11 19.8L3 29l6.4-2A13 13 0 1 0 16 3zm0 2.4a10.6 10.6 0 1 1-5.5 19.7l-.4-.2-3.8 1.2 1.2-3.7-.3-.4A10.6 10.6 0 0 1 16 5.4zm-4 5.3c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.3 2.6 4.1 6.4 5.6 3.2 1.2 3.8 1 4.5.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.4-.3-.8-.5s-2.2-1.1-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.3-2.1-2.7-.2-.4 0-.6.2-.8l.6-.7c.2-.2.2-.4.4-.6.1-.3.1-.5 0-.7l-1.1-2.7c-.3-.7-.6-.6-.8-.6z"/></svg>'
+# La zona de alumnos (/entrar, /mis-cursos, /curso, /admin) ya funciona. Este botón del menú se muestra al público
+# cuando termine de configurarse el envío de correos con el código (SMTP propio en Supabase); mientras tanto se
+# entra por la dirección directa. Cambia a True y ejecuta `python build.py` para mostrarlo.
+SHOW_ACCOUNT = False
+USER_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+ACCT_BTN = f'<a class="cart-btn acct-btn" href="/mis-cursos" aria-label="Mis cursos (zona de alumnos)" title="Mis cursos">{USER_SVG}</a>'
 LOGO = '<img src="/img/logo-marca.png" alt="" width="46" height="46" style="display:block">'
 
 # ---------------------------------------------------------------- guías -----
@@ -263,6 +269,7 @@ def header(home):
       <a href="{base}#paquetes">Paquetes</a>
       <a href="{base}#preguntas">Preguntas</a>
     </nav>
+    {ACCT_BTN if SHOW_ACCOUNT else ""}
     <button type="button" class="cart-btn" data-open-cart aria-label="Abrir carrito">
       {CART_SVG}<span class="cart-count" data-cart-count hidden>0</span>
     </button>
@@ -551,17 +558,149 @@ def build_course(c):
     write(f"guias/{c['slug']}.html", body)
 
 
+# ----------------------------------------------------------- zona alumnos ---
+def build_cursos_js():
+    """Contenido de las guías (módulos y lecciones) que usa el lector de la zona de alumnos."""
+    data = {}
+    for c in COURSES:
+        data[c["slug"]] = {
+            "title": c["title"], "grad": c["grad"], "icon": ICON[c["slug"]],
+            "modules": [{"title": name, "lessons": [{"t": t, "e": p} for t, p in lessons]} for name, lessons in c["modules"]],
+        }
+    write("js/cursos.js", "window.TC_COURSES = " + json.dumps(data, ensure_ascii=False) + ";\n")
+
+
+def zona_page(rel, path, title, page, main):
+    """Página de la zona de alumnos: sin indexar, con los scripts de Supabase y de la zona."""
+    h = head(title, "Zona de alumnos de Academia Taller Creativo", path, '  <meta name="robots" content="noindex,nofollow">\n')
+    h = h.replace("<body>", f'<body data-page="{page}">', 1)
+    scripts = '<script src="/js/supabase.js"></script>\n<script src="/js/cursos.js"></script>\n<script src="/js/zona.js"></script>\n'
+    foot = footer().replace("</body>", scripts + "</body>")
+    write(rel, f"{h}{header(False)}\n{main}\n{CART}{foot}")
+
+
+def build_zona():
+    build_cursos_js()
+    zona_page("entrar.html", "/entrar", "Entrar · Zona de alumnos · Academia Taller Creativo", "entrar", """<main class="zona">
+  <div class="wrap zona-narrow">
+    <div class="auth-card">
+      <h1>Entra a tu zona de alumnos</h1>
+      <p class="lead-sm">Escribe el correo con el que compraste. Te enviamos un código de 6 dígitos y entras sin contraseña.</p>
+      <form id="form-email" novalidate>
+        <label for="email">Tu correo</label>
+        <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="tucorreo@ejemplo.com" required>
+        <button class="btn btn-block" type="submit">Enviarme el código</button>
+      </form>
+      <form id="form-code" hidden novalidate>
+        <p class="sent">Te enviamos un código a <b id="sent-to"></b>. Si no llega en un minuto, revisa la carpeta de spam.</p>
+        <label for="code">Código de 6 dígitos</label>
+        <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456">
+        <button class="btn btn-block" type="submit">Entrar</button>
+        <p class="links"><button type="button" id="resend" class="linkbtn" disabled>Reenviar código</button> · <button type="button" id="change-email" class="linkbtn">Cambiar correo</button></p>
+      </form>
+      <p class="msg" id="msg" role="alert" hidden></p>
+      <p class="foot-note">¿Aún no tienes guías? <a href="/#guias">Míralas aquí</a>. ¿Ya pagaste y no ves tus guías? <a href="#" data-wa="Hola, ya pagué y necesito acceso a mis guías. Mi correo es:">Escríbenos</a>.</p>
+    </div>
+  </div>
+</main>""")
+    zona_page("mis-cursos.html", "/mis-cursos", "Mis cursos · Academia Taller Creativo", "mis-cursos", """<main class="zona">
+  <div class="wrap">
+    <div class="zona-head">
+      <div><p class="crumbs">Zona de alumnos</p><h1>Mis cursos</h1><p class="muted" id="who"></p></div>
+      <div class="zona-actions">
+        <a id="admin-link" class="btn btn-sm btn-ghost" href="/admin" hidden>Administrar alumnos</a>
+        <button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button>
+      </div>
+    </div>
+    <p class="msg" id="msg" role="alert" hidden></p>
+    <p id="loading" class="muted">Cargando tus guías…</p>
+    <div id="courses" class="mycourses"></div>
+    <div id="empty" class="empty" hidden>
+      <h2>Todavía no tienes guías en esta cuenta</h2>
+      <p>Cuando compres una guía, aparecerá aquí con el correo que usaste para entrar. Si ya pagaste y no la ves, escríbenos con tu comprobante.</p>
+      <p><a class="btn" href="/#guias">Ver las guías</a> <a class="btn btn-ghost" href="#" data-wa="Hola, ya pagué y no veo mi guía en Mis cursos. Mi correo es:">Escribirnos por WhatsApp</a></p>
+    </div>
+  </div>
+</main>""")
+    zona_page("curso.html", "/curso", "Mi curso · Academia Taller Creativo", "curso", """<main class="zona">
+  <div class="wrap">
+    <div class="zona-head">
+      <p class="crumbs"><a href="/mis-cursos">Mis cursos</a> › <span id="crumb">Guía</span></p>
+      <div class="zona-actions"><button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button></div>
+    </div>
+    <p class="msg" id="msg" role="alert" hidden></p>
+    <p id="loading" class="muted">Cargando tu guía…</p>
+    <div id="denied" class="empty" hidden>
+      <h2>No encontramos esta guía en tu cuenta</h2>
+      <p>Entra con el correo con el que la compraste. Si ya pagaste, escríbenos y la activamos.</p>
+      <p><a class="btn" href="/mis-cursos">Ir a Mis cursos</a> <a class="btn btn-ghost" href="#" data-wa="Hola, ya pagué y no puedo abrir mi guía. Mi correo es:">Escribirnos por WhatsApp</a></p>
+    </div>
+    <div id="reader" hidden>
+      <div class="reader-head">
+        <div id="c-cover" class="mc-cover"></div>
+        <div class="reader-info">
+          <h1 id="c-title"></h1>
+          <p class="muted" id="c-count"></p>
+          <div class="bar" id="c-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="bar-fill"></span></div>
+          <div class="mc-actions">
+            <button id="c-resume" class="btn btn-sm" type="button">Seguir donde voy</button>
+            <button id="c-pdf-open" class="btn btn-sm btn-ghost" type="button">Leer el PDF</button>
+            <button id="c-pdf-dl" class="btn btn-sm btn-ghost" type="button">Descargar PDF</button>
+          </div>
+        </div>
+      </div>
+      <p id="c-done" class="done-banner" hidden>¡Completaste esta guía! Muy pronto vas a poder descargar tu certificado digital aquí mismo.</p>
+      <h2 class="left">Lecciones y ejercicios</h2>
+      <p class="muted">Lee la guía en PDF, haz el ejercicio de cada lección y márcala como hecha para ver tu avance.</p>
+      <div class="mods" id="modules"></div>
+    </div>
+  </div>
+</main>""")
+    zona_page("admin.html", "/admin", "Administrar alumnos · Academia Taller Creativo", "admin", """<main class="zona">
+  <div class="wrap">
+    <div class="zona-head">
+      <div><p class="crumbs">Zona de alumnos</p><h1>Administrar alumnos</h1></div>
+      <div class="zona-actions"><a class="btn btn-sm btn-ghost" href="/mis-cursos">Mis cursos</a><button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button></div>
+    </div>
+    <p class="msg" id="msg" role="alert" hidden></p>
+    <p id="loading" class="muted">Cargando…</p>
+    <div id="denied" class="empty" hidden><h2>No tienes permiso para esta página</h2><p>Solo la administración de la Academia puede dar acceso a las guías.</p></div>
+    <div id="admin" hidden>
+      <section class="panel">
+        <h2>Dar acceso a una guía</h2>
+        <p class="muted">Úsalo cuando alguien pague por WhatsApp o por otro medio. Entra con ese correo y verá sus guías al instante.</p>
+        <form id="form-grant" novalidate>
+          <label for="g-email">Correo del alumno</label>
+          <input id="g-email" type="email" inputmode="email" placeholder="alumno@ejemplo.com" required>
+          <fieldset><legend>Guías <button type="button" id="all4" class="linkbtn">Marcar las 4</button></legend><div id="slugs" class="chks"></div></fieldset>
+          <div class="row2">
+            <div><label for="g-source">¿Cómo pagó?</label><select id="g-source"><option value="whatsapp">WhatsApp</option><option value="manual">Otro medio</option></select></div>
+            <div><label for="g-note">Nota (opcional)</label><input id="g-note" type="text" maxlength="300" placeholder="Ej. Nequi, 24 nov"></div>
+          </div>
+          <button class="btn" type="submit">Dar acceso</button>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Alumnos con acceso <span class="muted" id="count"></span></h2><input id="filter" type="search" placeholder="Buscar por correo" aria-label="Buscar por correo"></div>
+        <div id="list"></div>
+      </section>
+    </div>
+  </div>
+</main>""")
+
+
 def build_seo():
     urls = ["/"] + [f"/guias/{c['slug']}" for c in COURSES]
     sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     sm += "".join(f"  <url><loc>{SITE}{u}</loc></url>\n" for u in urls) + "</urlset>\n"
     write("sitemap.xml", sm)
-    write("robots.txt", f"User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n")
+    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /entrar\nDisallow: /mis-cursos\nDisallow: /curso\nDisallow: /admin\nSitemap: {SITE}/sitemap.xml\n")
 
 
 if __name__ == "__main__":
     build_index()
     for course in COURSES:
         build_course(course)
+    build_zona()
     build_seo()
     print("OK:", ["index.html"] + [f"guias/{c['slug']}.html" for c in COURSES])

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mis cursos · Academia Taller Creativo</title>
+  <meta name="description" content="Zona de alumnos de Academia Taller Creativo">
+  <link rel="canonical" href="https://tallercreativo.com.co/mis-cursos">
+  <meta property="og:title" content="Mis cursos · Academia Taller Creativo">
+  <meta property="og:description" content="Zona de alumnos de Academia Taller Creativo">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tallercreativo.com.co/mis-cursos">
+  <meta property="og:image" content="https://tallercreativo.com.co/img/logo-completo.png">
+  <meta name="theme-color" content="#14285A">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <meta name="robots" content="noindex,nofollow">
+</head>
+<body data-page="mis-cursos">
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="/" aria-label="Academia Taller Creativo">
+      <img src="/img/logo-marca.png" alt="" width="46" height="46" style="display:block">
+      <span class="brand-text"><small>Academia</small><b>Taller Creativo</b></span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a href="/#medida">Tu taller</a>
+      <a href="/#guias">Guías</a>
+      <a href="/#paquetes">Paquetes</a>
+      <a href="/#preguntas">Preguntas</a>
+    </nav>
+    
+    <button type="button" class="cart-btn" data-open-cart aria-label="Abrir carrito">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.6l2-8H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19.5" r="1.5" fill="currentColor"/><circle cx="17" cy="19.5" r="1.5" fill="currentColor"/></svg><span class="cart-count" data-cart-count hidden>0</span>
+    </button>
+    <a class="btn btn-sm hide-sm" href="#" data-wa="Hola, quiero información de la Academia Taller Creativo"><svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11 19.8L3 29l6.4-2A13 13 0 1 0 16 3zm0 2.4a10.6 10.6 0 1 1-5.5 19.7l-.4-.2-3.8 1.2 1.2-3.7-.3-.4A10.6 10.6 0 0 1 16 5.4zm-4 5.3c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.3 2.6 4.1 6.4 5.6 3.2 1.2 3.8 1 4.5.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.4-.3-.8-.5s-2.2-1.1-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.3-2.1-2.7-.2-.4 0-.6.2-.8l.6-.7c.2-.2.2-.4.4-.6.1-.3.1-.5 0-.7l-1.1-2.7c-.3-.7-.6-.6-.8-.6z"/></svg><span>Escríbenos</span></a>
+  </div>
+</header>
+
+<main class="zona">
+  <div class="wrap">
+    <div class="zona-head">
+      <div><p class="crumbs">Zona de alumnos</p><h1>Mis cursos</h1><p class="muted" id="who"></p></div>
+      <div class="zona-actions">
+        <a id="admin-link" class="btn btn-sm btn-ghost" href="/admin" hidden>Administrar alumnos</a>
+        <button id="logout" class="btn btn-sm btn-ghost" type="button">Salir</button>
+      </div>
+    </div>
+    <p class="msg" id="msg" role="alert" hidden></p>
+    <p id="loading" class="muted">Cargando tus guías…</p>
+    <div id="courses" class="mycourses"></div>
+    <div id="empty" class="empty" hidden>
+      <h2>Todavía no tienes guías en esta cuenta</h2>
+      <p>Cuando compres una guía, aparecerá aquí con el correo que usaste para entrar. Si ya pagaste y no la ves, escríbenos con tu comprobante.</p>
+      <p><a class="btn" href="/#guias">Ver las guías</a> <a class="btn btn-ghost" href="#" data-wa="Hola, ya pagué y no veo mi guía en Mis cursos. Mi correo es:">Escribirnos por WhatsApp</a></p>
+    </div>
+  </div>
+</main>
+
+<div class="cart-overlay" id="cart-overlay"></div>
+<aside class="cart" id="cart" aria-hidden="true" aria-label="Tu carrito">
+  <div class="cart-head">
+    <h2>Tu carrito</h2>
+    <button type="button" class="cart-close" aria-label="Cerrar carrito">×</button>
+  </div>
+  <div class="cart-body">
+    <div class="currency small" role="group" aria-label="Moneda">
+      <button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button>
+      <button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button>
+    </div>
+    <p class="cart-empty">Tu carrito está vacío. Agrega una o más guías y el mejor precio se aplica solo.</p>
+    <ul class="cart-items"></ul>
+    <div class="cart-summary" hidden>
+      <div class="cart-line"><span>Total</span><b class="cart-total"></b></div>
+      <p class="cart-saving"></p>
+      <p class="cart-hint"></p>
+      <div class="cart-pay"></div>
+      <p class="cart-note"></p>
+    </div>
+  </div>
+</aside>
+
+<footer class="footer">
+  <div class="wrap foot-in">
+    <img src="/img/logo-completo.png" alt="Academia Taller Creativo: Aprende, Crea, Emprende" width="120" height="120" loading="lazy">
+    <span>© <span id="year">2026</span> Academia Taller Creativo · Todos los derechos reservados</span>
+  </div>
+</footer>
+
+<a class="wa-float" href="#" data-wa="Hola, quiero información de la Academia Taller Creativo" aria-label="Escríbenos por WhatsApp">
+  <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path fill="#fff" d="M16 3a13 13 0 0 0-11 19.8L3 29l6.4-2A13 13 0 1 0 16 3zm0 2.4a10.6 10.6 0 1 1-5.5 19.7l-.4-.2-3.8 1.2 1.2-3.7-.3-.4A10.6 10.6 0 0 1 16 5.4zm-4 5.3c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.3 2.6 4.1 6.4 5.6 3.2 1.2 3.8 1 4.5.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.4-.3-.8-.5s-2.2-1.1-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.3-2.1-2.7-.2-.4 0-.6.2-.8l.6-.7c.2-.2.2-.4.4-.6.1-.3.1-.5 0-.7l-1.1-2.7c-.3-.7-.6-.6-.8-.6z"/></svg>
+</a>
+
+<script src="/app.js"></script>
+<script src="/js/supabase.js"></script>
+<script src="/js/cursos.js"></script>
+<script src="/js/zona.js"></script>
+</body>
+</html>

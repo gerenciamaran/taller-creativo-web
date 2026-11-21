@@ -1,0 +1,20 @@
+# Solo se declara lo que se quiere cambiar en el proyecto de Supabase de Academia Taller Creativo.
+# Todo lo demás se deja como está (no se declara).
+project_id = "kpseadjekdezqwjjflfg"
+
+[auth]
+site_url = "https://tallercreativo.com.co"
+additional_redirect_urls = ["https://tallercreativo.com.co", "http://localhost:8123"]
+
+[auth.email]
+# Código de 6 dígitos que llega al correo (en el mismo correo va solo el código, sin enlace).
+otp_length = 6
+otp_expiry = 3600
+
+[auth.email.template.confirmation]
+subject = "Tu código para entrar a Academia Taller Creativo"
+content_path = "./supabase/templates/codigo.html"
+
+[auth.email.template.magic_link]
+subject = "Tu código para entrar a Academia Taller Creativo"
+content_path = "./supabase/templates/codigo.html"
