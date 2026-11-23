@@ -219,7 +219,10 @@
     var old = document.getElementById("ld-course");
     if (!old || !String(old.textContent).includes('"' + url + '"')) {
       if (old) old.remove();
-      var offer = { "@type": "Offer", url: url, priceCurrency: "COP", price: String(Math.round(c.price_cop)), availability: "https://schema.org/InStock", category: "Paid" };
+      var offer = { "@type": "Offer", url: url, priceCurrency: "COP", price: String(Math.round(c.price_cop)), availability: "https://schema.org/InStock", category: "Paid",
+        hasMerchantReturnPolicy: { "@type": "MerchantReturnPolicy", applicableCountry: "CO", returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow", merchantReturnDays: 7, returnFees: "https://schema.org/FreeReturn", refundType: "https://schema.org/FullRefund" },
+        shippingDetails: { "@type": "OfferShippingDetails", shippingRate: { "@type": "MonetaryAmount", value: 0, currency: "COP" }, shippingDestination: { "@type": "DefinedRegion", addressCountry: "CO" },
+          deliveryTime: { "@type": "ShippingDeliveryTime", handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 0, unitCode: "DAY" }, transitTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 0, unitCode: "DAY" } } } };
       var ld = document.createElement("script");
       ld.type = "application/ld+json";
       ld.id = "ld-course";

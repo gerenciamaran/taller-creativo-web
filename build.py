@@ -525,11 +525,21 @@ ORG = {"@type": "Organization", "@id": SITE + "/#org", "name": "Academia Taller 
                         "areaServed": ["CO", "LATAM"]}}
 
 
+# Garantía de 7 días con devolución completa (lo que dicen la página y las preguntas frecuentes) y entrega digital inmediata.
+RETURN_POLICY = {"@type": "MerchantReturnPolicy", "applicableCountry": "CO", "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+                 "merchantReturnDays": 7, "returnFees": "https://schema.org/FreeReturn", "refundType": "https://schema.org/FullRefund"}
+SHIPPING_DIGITAL = {"@type": "OfferShippingDetails", "shippingRate": {"@type": "MonetaryAmount", "value": 0, "currency": "COP"},
+                    "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "CO"},
+                    "deliveryTime": {"@type": "ShippingDeliveryTime", "handlingTime": {"@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY"},
+                                     "transitTime": {"@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY"}}}
+
+
 def course_ld(c, others_unused=None):
     url = f"{SITE}/guias/{c['slug']}"
     img = cover_url(c) or SITE + "/img/og-taller-creativo.jpg"
     offer = {"@type": "Offer", "url": url, "priceCurrency": "COP", "price": str(round(float(c["price_cop"]))), "availability": "https://schema.org/InStock",
-             "category": "Paid", "seller": {"@id": SITE + "/#org"}}
+             "category": "Paid", "seller": {"@id": SITE + "/#org"},
+             "hasMerchantReturnPolicy": RETURN_POLICY, "shippingDetails": SHIPPING_DIGITAL}
     return {"@context": "https://schema.org", "@graph": [
         ORG,
         {"@type": "Course", "@id": url + "#course", "name": c["title"], "description": c.get("promise") or c.get("short") or "", "url": url, "image": img,
