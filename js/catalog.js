@@ -45,9 +45,9 @@
   }
   function fetchCatalog() {
     return Promise.all([
-      rest("courses?select=slug,title,category,short,promise,who,bullets,learn,extras,kit,grad,cover_path,price_cop,price_usd,sort_order,course_modules(id,position,title,course_lessons(id,position,title,exercise))&status=eq.publicado&order=sort_order.asc"),
+      rest("courses?select=slug,title,category,short,promise,who,bullets,learn,extras,kit,grad,cover_path,price_cop,price_usd,list_price_cop,list_price_usd,sort_order,course_modules(id,position,title,course_lessons(id,position,title,exercise))&status=eq.publicado&order=sort_order.asc"),
       rest("pricing_tiers?select=min_qty,percent_off&order=min_qty.asc"),
-      rest("bundles?select=id,code,name,description,slugs,price_cop,price_usd,featured,sort_order&active=eq.true&order=sort_order.asc")
+      rest("bundles?select=id,code,name,description,slugs,price_cop,price_usd,image_path,featured,sort_order&active=eq.true&order=sort_order.asc")
     ]).then(function (r) { return { courses: r[0], tiers: r[1], bundles: r[2], at: Date.now() }; });
   }
   function readCache() {
@@ -77,6 +77,17 @@
     return "COP $" + Math.round(n).toLocaleString("es-CO");
   };
   TC.unit = function (c, cur) { return cur === "usd" ? Number(c.price_usd) : Number(c.price_cop); };
+  // Precio normal (tachado): solo se muestra si es mayor que el precio de venta (promoción).
+  TC.listOf = function (c, cur) { var l = Number(cur === "usd" ? c.list_price_usd : c.list_price_cop); return l > TC.unit(c, cur) ? l : 0; };
+  TC.priceBlock = function (c, tag, cls) {
+    var html = TC.priceEl(c.price_cop, c.price_usd, tag || "b", cls || "price big");
+    var lc = TC.listOf(c, "cop"), lu = TC.listOf(c, "usd");
+    if (lc || lu) {
+      var tc = lc ? TC.money(lc, "cop") : "";
+      html += '<s class="price-old" data-cop="' + esc(tc) + '" data-usd="' + esc(lu ? TC.money(lu, "usd") : "") + '">' + esc(tc) + "</s>";
+    }
+    return '<span class="price-wrap">' + html + "</span>";
+  };
   TC.minPrice = function (cur) {
     var v = TC.courses.map(function (c) { return TC.unit(c, cur); }).filter(function (x) { return x > 0; });
     return v.length ? Math.min.apply(null, v) : 0;
@@ -139,7 +150,7 @@
     return '<article class="guia ' + esc(String(c.grad).replace("g-", "gc-")) + '">' + top +
       '<div class="guia-body"><h3><a href="' + href + '">' + esc(c.title) + '</a></h3><p class="g-short">' + esc(c.short) + "</p>" +
       '<p class="g-meta"><i>' + svg(PLAY) + "</i>" + c.n_mod + " módulos · " + c.n_les + " lecciones</p>" +
-      '<div class="guia-foot">' + TC.priceEl(c.price_cop, c.price_usd, "b", "price big") +
+      '<div class="guia-foot">' + TC.priceBlock(c) +
       '<button type="button" class="btn btn-sm btn-ghost" data-add="' + esc(c.slug) + '" data-label="Agregar"><span class="lbl">Agregar</span></button></div>' +
       '<a class="g-cta" href="' + href + '"><span class="g-cta-l">' + svg(PLAY) + "Ver curso</span><span aria-hidden=\"true\">›</span></a></div></article>";
   }
@@ -147,12 +158,14 @@
     var cop = 0, usd = 0, icons = "";
     b.slugs.forEach(function (s) {
       var c = TC.course(s);
-      if (c) { cop += Number(c.price_cop); usd += Number(c.price_usd); }
+      if (c) { cop += TC.listOf(c, "cop") || Number(c.price_cop); usd += TC.listOf(c, "usd") || Number(c.price_usd); }
       icons += '<span class="cat-ico mini">' + TC.icon(s) + "</span>";
     });
     var saveCop = Math.max(0, cop - b.price_cop), saveUsd = Math.max(0, usd - Number(b.price_usd));
+    var img = b.image_path ? TC.coverUrl({ cover_path: b.image_path }) : "";
+    var media = img ? '<img class="pack-img" src="' + esc(img) + '" alt="' + esc(b.name) + '" loading="lazy" width="640" height="360">' : '<div class="pack-ico">' + icons + "</div>";
     return '<article class="pack' + (b.featured ? " featured" : "") + '">' + (b.featured ? '<span class="badge-top">MEJOR PRECIO</span>' : "") +
-      '<div class="pack-ico">' + icons + "</div><h3>" + esc(b.name) + '</h3><p class="pack-desc">' + esc(b.description) + "</p>" +
+      media + "<h3>" + esc(b.name) + '</h3><p class="pack-desc">' + esc(b.description) + "</p>" +
       '<div class="pack-price">' + TC.priceEl(b.price_cop, b.price_usd, "b") + (cop > b.price_cop ? TC.priceEl(cop, usd, "s") : "") + "</div>" +
       (saveCop > 0 ? '<p class="pack-save">Ahorras ' + TC.priceEl(saveCop, saveUsd) + "</p>" : "") +
       '<button type="button" class="btn btn-block" data-add-pack="' + esc(b.slugs.join(",")) + '">Agregar al carrito</button></article>';
@@ -193,7 +206,7 @@
       '<ul class="ticks"><li>Paso a paso, sin experiencia previa</li><li>Ejercicio práctico al final de cada lección</li><li>Acceso inmediato tras el pago · Garantía de 7 días</li></ul></div>' +
       '<aside class="buybox"><div class="buybox-cover ' + (cover ? "has-cover" : esc(c.grad)) + '">' + (cover ? '<img src="' + esc(cover) + '" alt="Portada de la guía ' + esc(c.title) + '">' : TC.icon(c.slug)) + "</div>" +
       '<div class="currency small" role="group" aria-label="Moneda"><button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button><button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button></div>' +
-      '<div class="buybox-price">' + TC.priceEl(c.price_cop, c.price_usd, "b") + "<span>Acceso de por vida</span></div>" + buy +
+      '<div class="buybox-price">' + TC.priceBlock(c, "b", "price") + "<span>Acceso de por vida</span></div>" + buy +
       '<p class="buybox-deal">Con 2 o más guías pagas menos por cada una. <a href="/#paquetes">Ver paquetes</a></p>' +
       '<ul class="buybox-list"><li>Guía completa en PDF</li><li>Plantillas y ejercicios extra</li><li>Certificado digital</li><li>Garantía de 7 días</li></ul></aside></div></section>' +
       '<section class="section"><div class="wrap two-col"><div>' +

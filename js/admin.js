@@ -103,7 +103,7 @@
         thumb,
         el("div", { class: "ac-body" }, [
           el("div", { class: "ac-top" }, [el("h3", { text: c.title }), el("span", { class: "chip2 " + (pub ? "pub" : "draft"), text: pub ? "Publicado" : "Borrador" })]),
-          el("p", { class: "muted", text: "/guias/" + c.slug + " · " + c.modules.length + " módulos · " + lessons + " lecciones · " + (videoCount[c.slug] || 0) + " con video · " + money(c.price_cop) + " COP / US$" + Number(c.price_usd) }),
+          el("p", { class: "muted", text: "/guias/" + c.slug + " · " + c.modules.length + " módulos · " + lessons + " lecciones · " + (videoCount[c.slug] || 0) + " con video · " + money(c.price_cop) + " COP / US$" + Number(c.price_usd) + (Number(c.list_price_cop) > c.price_cop ? " · normal " + money(c.list_price_cop) : "") }),
           el("div", { class: "vactions" }, actions)
         ])
       ]));
@@ -193,8 +193,10 @@
         grad: base ? base.grad : "g-draw",
         coverPath: base ? base.cover_path || "" : "",
         oldCover: "",
-        price_cop: base ? base.price_cop : 24000,
-        price_usd: base ? Number(base.price_usd) : 6,
+        price_cop: base ? base.price_cop : 49000,
+        price_usd: base ? Number(base.price_usd) : 14,
+        list_price_cop: base ? (base.list_price_cop == null ? "" : base.list_price_cop) : 60000,
+        list_price_usd: base ? (base.list_price_usd == null ? "" : Number(base.list_price_usd)) : 17,
         status: base ? base.status : "borrador",
         sort_order: base ? base.sort_order : (courses.length + 1) * 10,
         pdf: pdf ? { size: pdf.metadata && pdf.metadata.size } : null,
@@ -236,6 +238,8 @@
     var kit = area(ed.kit, 3); kit.addEventListener("input", function () { ed.kit = kit.value; });
     var pc = input(ed.price_cop, { type: "number", min: "0", step: "100" }); pc.addEventListener("input", function () { ed.price_cop = pc.value; });
     var pu = input(ed.price_usd, { type: "number", min: "0", step: "0.5" }); pu.addEventListener("input", function () { ed.price_usd = pu.value; });
+    var lc = input(ed.list_price_cop, { type: "number", min: "0", step: "100" }); lc.addEventListener("input", function () { ed.list_price_cop = lc.value; });
+    var lu = input(ed.list_price_usd, { type: "number", min: "0", step: "0.5" }); lu.addEventListener("input", function () { ed.list_price_usd = lu.value; });
     var order = input(ed.sort_order, { type: "number", step: "10" }); order.addEventListener("input", function () { ed.sort_order = order.value; });
 
     host.appendChild(el("section", { class: "panel" }, [
@@ -252,7 +256,10 @@
         field("Qué incluye (una por línea)", extras), field("Para empezar necesitas (una por línea)", kit)
       ]),
       el("div", { class: "grid3" }, [
-        field("Precio en pesos (COP) *", pc), field("Precio en dólares (US$) *", pu), field("Orden en el catálogo", order, "Los números más bajos salen primero.")
+        field("Precio de venta en pesos (COP) *", pc, "Lo que paga quien compra solo este curso (el de promoción)."), field("Precio de venta en dólares (US$) *", pu), field("Orden en el catálogo", order, "Los números más bajos salen primero.")
+      ]),
+      el("div", { class: "grid3" }, [
+        field("Precio normal en pesos (COP), tachado", lc, "Opcional. Si lo dejas vacío o es menor que el de venta, no se muestra tachado."), field("Precio normal en dólares (US$), tachado", lu), el("div", {})
       ])
     ]));
 
@@ -448,7 +455,8 @@
     var payload = {
       slug: ed.slug, title: ed.title.trim(), category: ed.category.trim(), short: ed.short.trim(), promise: ed.promise.trim(), who: ed.who.trim(),
       bullets: lines(ed.bullets), learn: lines(ed.learn), extras: lines(ed.extras), kit: lines(ed.kit), grad: ed.grad, cover_path: ed.coverPath || "",
-      price_cop: Math.round(Number(ed.price_cop)), price_usd: Number(ed.price_usd), status: ed.status, sort_order: Math.round(Number(ed.sort_order) || 100),
+      price_cop: Math.round(Number(ed.price_cop)), price_usd: Number(ed.price_usd),
+      list_price_cop: ed.list_price_cop === "" || ed.list_price_cop == null ? "" : Math.round(Number(ed.list_price_cop)), list_price_usd: ed.list_price_usd === "" || ed.list_price_usd == null ? "" : Number(ed.list_price_usd), status: ed.status, sort_order: Math.round(Number(ed.sort_order) || 100),
       modules: ed.modules.map(function (m) { return { id: m.id || "", title: m.title.trim(), lessons: m.lessons.map(function (l) { return { id: l.id || "", title: l.title.trim(), exercise: l.exercise.trim() }; }) }; })
     };
     var keep = {};
@@ -528,7 +536,7 @@
     Promise.all([sb.from("pricing_tiers").select("*").order("min_qty"), sb.from("bundles").select("*").order("sort_order")]).then(function (res) {
       host.textContent = "";
       var tiers = (res[0].data || []).map(function (t) { return { min_qty: t.min_qty, percent_off: Number(t.percent_off) }; });
-      var bundles = (res[1].data || []).map(function (b) { return Object.assign({}, b, { isNew: false }); });
+      var bundles = (res[1].data || []).map(function (b) { return Object.assign({}, b, { isNew: false, origImage: b.image_path || "" }); });
 
       // descuentos por cantidad
       var tiersHost = el("div", {});
@@ -536,8 +544,13 @@
         tiersHost.textContent = "";
         tiers.forEach(function (t, i) {
           var q = input(t.min_qty, { type: "number", min: "2", step: "1" }); q.addEventListener("input", function () { t.min_qty = q.value; });
-          var p = input(t.percent_off, { type: "number", min: "0", max: "90", step: "0.5" }); p.addEventListener("input", function () { t.percent_off = p.value; });
-          tiersHost.appendChild(el("div", { class: "trow" }, [el("span", { text: "Desde" }), q, el("span", { text: "cursos en el carrito:" }), p, el("span", { text: "% de descuento" }),
+          var p = input(t.percent_off, { type: "number", min: "0", max: "90", step: "0.01" });
+          var avgSale = courses.length ? courses.reduce(function (sum, c) { return sum + c.price_cop; }, 0) / courses.length : 0;
+          var hint = el("span", { class: "tier-hint" });
+          var upd = function () { var pct = Number(t.percent_off) || 0; hint.textContent = avgSale ? "→ cada curso a " + money(Math.round(avgSale * (1 - pct / 100) / 100) * 100) : ""; };
+          p.addEventListener("input", function () { t.percent_off = p.value; upd(); });
+          upd();
+          tiersHost.appendChild(el("div", { class: "trow" }, [el("span", { text: "Desde" }), q, el("span", { text: "cursos en el carrito:" }), p, el("span", { text: "% de descuento" }), hint,
             btn("✕", "btn-ghost danger", function () { tiers.splice(i, 1); paintTiers(); })]));
         });
       }
@@ -555,7 +568,7 @@
       });
       host.appendChild(el("section", { class: "panel" }, [
         el("h2", { text: "Descuentos por cantidad" }),
-        el("p", { class: "muted", text: "Si alguien lleva varios cursos, el precio baja ese porcentaje sobre la suma. Se aplica el descuento de la mayor cantidad que se cumpla." }),
+        el("p", { class: "muted", text: "Si alguien lleva varios cursos, el precio baja ese porcentaje sobre el precio de venta (promoción) de cada curso; a la derecha ves a cuánto queda cada curso. Se aplica el descuento de la mayor cantidad que se cumpla." }),
         tiersHost,
         el("div", { class: "vactions" }, [btn("+ Añadir descuento", "btn-ghost", function () { tiers.push({ min_qty: (tiers.length ? Number(tiers[tiers.length - 1].min_qty) + 1 : 2), percent_off: 10 }); paintTiers(); }), saveTiers])
       ]));
@@ -570,6 +583,32 @@
           var desc = input(b.description || "", { maxlength: "300" }); desc.addEventListener("input", function () { b.description = desc.value; });
           var pc = input(b.price_cop, { type: "number", min: "0", step: "100" }); pc.addEventListener("input", function () { b.price_cop = pc.value; });
           var pu = input(b.price_usd, { type: "number", min: "0", step: "0.5" }); pu.addEventListener("input", function () { b.price_usd = pu.value; });
+          var imgBox = el("div", { class: "cover-box" });
+          function paintImg() {
+            imgBox.textContent = "";
+            var u = Z.coverUrl(b.image_path);
+            imgBox.appendChild(u ? el("img", { src: u, alt: "Imagen del paquete", class: "ac-thumb-pack" }) : el("div", { class: "cover-empty", text: "Sin imagen: se muestran los íconos de los cursos." }));
+          }
+          var imgFile = el("input", { type: "file", accept: "image/jpeg,image/png,image/webp", hidden: "" });
+          imgFile.addEventListener("change", function () {
+            var f = imgFile.files && imgFile.files[0];
+            imgFile.value = "";
+            if (!f) return;
+            if (!IMG_TYPES[f.type]) return setMsg("La imagen debe ser JPG, PNG o WebP.", "err");
+            if (f.size > 5 * 1024 * 1024) return setMsg("La imagen pesa más de 5 MB. Usa una más liviana.", "err");
+            var path = "paquete-" + (slugify(b.code || b.name) || "nuevo") + "-" + Date.now() + "." + IMG_TYPES[f.type];
+            setMsg("Subiendo la imagen…");
+            sb.storage.from("covers").upload(path, f, { contentType: f.type, upsert: false }).then(function (r) {
+              if (r.error) return err(r.error);
+              if (b.image_path && b.image_path !== b.origImage) sb.storage.from("covers").remove([b.image_path]);   // subida anterior que no se guardó
+              b.image_path = path; paintImg();
+              setMsg("Imagen subida. Pulsa «Guardar paquete» para aplicarla.", "ok");
+            });
+          });
+          paintImg();
+          var imgField = field("Imagen del paquete (JPG, PNG o WebP; mejor 16:9, por ejemplo 960×540)", el("div", {}, [imgBox,
+            el("div", { class: "vactions" }, [btn("Subir imagen", "", function () { imgFile.click(); }), btn("Quitar imagen", "btn-ghost", function () { b.image_path = ""; paintImg(); }), imgFile])]),
+            "Se ve en la tarjeta del paquete, en la sección «Paquetes» de la página.");
           var checks = el("div", { class: "chks" }, courses.map(function (c) {
             var cb = el("input", { type: "checkbox" }); cb.checked = b.slugs.indexOf(c.slug) >= 0;
             cb.addEventListener("change", function () { b.slugs = b.slugs.filter(function (x) { return x !== c.slug; }); if (cb.checked) b.slugs.push(c.slug); });
@@ -578,23 +617,32 @@
           var feat = el("input", { type: "checkbox" }); feat.checked = !!b.featured; feat.addEventListener("change", function () { b.featured = feat.checked; });
           var act = el("input", { type: "checkbox" }); act.checked = b.active !== false; act.addEventListener("change", function () { b.active = act.checked; });
           var sum = b.slugs.reduce(function (t, s) { var c = courses.filter(function (x) { return x.slug === s; })[0]; return t + (c ? c.price_cop : 0); }, 0);
+          var sumList = b.slugs.reduce(function (t, s) { var c = courses.filter(function (x) { return x.slug === s; })[0]; return t + (c ? (Number(c.list_price_cop) > c.price_cop ? Number(c.list_price_cop) : c.price_cop) : 0); }, 0);
           var saveB = btn("Guardar paquete", "", function () {
             if (!b.name.trim()) return setMsg("El paquete necesita nombre.", "err");
             if (!validSlug(b.code)) return setMsg("El código del paquete solo puede tener minúsculas, números y guiones.", "err");
             if (b.slugs.length < 2) return setMsg("Elige al menos 2 cursos para el paquete.", "err");
-            var row = { code: b.code, name: b.name.trim(), description: (b.description || "").trim() || null, slugs: b.slugs, price_cop: Math.round(Number(b.price_cop) || 0), price_usd: Number(b.price_usd) || 0, featured: !!b.featured, active: b.active !== false, sort_order: (bi + 1) * 10 };
+            var row = { code: b.code, name: b.name.trim(), description: (b.description || "").trim() || null, slugs: b.slugs, price_cop: Math.round(Number(b.price_cop) || 0), price_usd: Number(b.price_usd) || 0, image_path: b.image_path || null, featured: !!b.featured, active: b.active !== false, sort_order: (bi + 1) * 10 };
             var req = b.isNew ? sb.from("bundles").insert(row) : sb.from("bundles").update(row).eq("id", b.id);
-            req.then(function (r) { if (r.error) return err(r.error); setMsg("Paquete guardado.", "ok"); renderPricing(); });
+            req.then(function (r) {
+              if (r.error) return err(r.error);
+              if (b.origImage && b.origImage !== (b.image_path || "")) sb.storage.from("covers").remove([b.origImage]);
+              setMsg("Paquete guardado.", "ok"); renderPricing();
+            });
           });
           var delB = btn("Borrar paquete", "btn-ghost danger", function () {
             if (b.isNew) { bundles.splice(bi, 1); return paintBundles(); }
             if (!window.confirm("¿Borrar el paquete «" + b.name + "»?")) return;
-            sb.from("bundles").delete().eq("id", b.id).then(function (r) { if (r.error) return err(r.error); setMsg("Paquete borrado.", "ok"); renderPricing(); });
+            sb.from("bundles").delete().eq("id", b.id).then(function (r) {
+              if (r.error) return err(r.error);
+              if (b.origImage) sb.storage.from("covers").remove([b.origImage]);
+              setMsg("Paquete borrado.", "ok"); renderPricing();
+            });
           });
           bundlesHost.appendChild(el("div", { class: "panel inner" }, [
             el("div", { class: "grid2" }, [field("Nombre", name), field("Código (para pagos)", code)]),
-            field("Descripción", desc), field("Cursos que incluye", checks),
-            el("div", { class: "grid3" }, [field("Precio del paquete (COP)", pc, "Suma de los cursos sueltos: " + money(sum)), field("Precio del paquete (US$)", pu), el("div", { class: "ffield" }, [
+            field("Descripción", desc), imgField, field("Cursos que incluye", checks),
+            el("div", { class: "grid3" }, [field("Precio del paquete (COP)", pc, "Cursos sueltos: " + money(sum) + " con promoción · " + money(sumList) + " a precio normal (el tachado de la tarjeta)"), field("Precio del paquete (US$)", pu), el("div", { class: "ffield" }, [
               el("label", { class: "chk" }, [feat, " Destacado (insignia «Mejor precio»)"]), el("label", { class: "chk" }, [act, " Activo (visible en la página)"])])]),
             el("div", { class: "vactions" }, [saveB, delB])
           ]));

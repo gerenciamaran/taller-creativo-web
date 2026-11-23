@@ -363,7 +363,7 @@ def write(rel, text):
 # paquetes, una página por curso y datos estructurados. Así Google ve el contenido sin ejecutar JavaScript. En el
 # navegador js/catalog.js lo vuelve a pintar con lo último de la base. Un curso nuevo funciona al instante por la
 # plantilla guia.html; al volver a ejecutar `python build.py` y subirlo, también queda como página fija.
-CAT_SELECT = ("courses?select=slug,title,category,short,promise,who,bullets,learn,extras,kit,grad,cover_path,price_cop,price_usd,"
+CAT_SELECT = ("courses?select=slug,title,category,short,promise,who,bullets,learn,extras,kit,grad,cover_path,price_cop,price_usd,list_price_cop,list_price_usd,"
               "sort_order,updated_at,course_modules(id,position,title,course_lessons(id,position,title,exercise))"
               "&status=eq.publicado&order=sort_order.asc")
 _CAT = None
@@ -385,7 +385,7 @@ def fetch_catalog():
             return json.loads(urllib.request.urlopen(req, timeout=20).read())
 
         courses = get(CAT_SELECT)
-        bundles = get("bundles?select=id,code,name,description,slugs,price_cop,price_usd,featured,sort_order&active=eq.true&order=sort_order.asc")
+        bundles = get("bundles?select=id,code,name,description,slugs,price_cop,price_usd,image_path,featured,sort_order&active=eq.true&order=sort_order.asc")
         for c in courses:
             c["modules"] = [{"title": m["title"], "lessons": sorted(m["course_lessons"], key=lambda x: x["position"])}
                             for m in sorted(c.pop("course_modules"), key=lambda x: x["position"])]
@@ -406,6 +406,25 @@ def money(n, cur):
 
 def price_el(cop, usd, tag="span", cls="price"):
     return f'<{tag} class="{cls}" data-cop="{e(money(cop, "cop"))}" data-usd="{e(money(usd, "usd"))}">{e(money(cop, "cop"))}</{tag}>'
+
+
+def price_block(c, tag="b", cls="price big"):
+    """Precio de venta y, si existe y es mayor, el precio normal tachado (igual que TC.priceBlock en js/catalog.js)."""
+    out = price_el(c["price_cop"], c["price_usd"], tag, cls)
+    lc = float(c.get("list_price_cop") or 0)
+    lu = float(c.get("list_price_usd") or 0)
+    lc = lc if lc > float(c["price_cop"]) else 0
+    lu = lu if lu > float(c["price_usd"]) else 0
+    if lc or lu:
+        tc = money(lc, "cop") if lc else ""
+        out += f'<s class="price-old" data-cop="{e(tc)}" data-usd="{e(money(lu, "usd") if lu else "")}">{e(tc)}</s>'
+    return f'<span class="price-wrap">{out}</span>'
+
+
+def list_or_price(c, cur):
+    key, base = ("list_price_usd", "price_usd") if cur == "usd" else ("list_price_cop", "price_cop")
+    lst = float(c.get(key) or 0)
+    return lst if lst > float(c[base]) else float(c[base])
 
 
 def cover_url(c):
@@ -438,7 +457,7 @@ def card_html(c):
     return (f'<article class="guia {e(str(c["grad"]).replace("g-", "gc-"))}">{top}'
             f'<div class="guia-body"><h3><a href="{href}">{e(c["title"])}</a></h3><p class="g-short">{e(c["short"] or "")}</p>'
             f'<p class="g-meta"><i>{svg_icon(PLAY_PATH)}</i>{c["n_mod"]} módulos · {c["n_les"]} lecciones</p>'
-            f'<div class="guia-foot">{price_el(c["price_cop"], c["price_usd"], "b", "price big")}'
+            f'<div class="guia-foot">{price_block(c)}'
             f'<button type="button" class="btn btn-sm btn-ghost" data-add="{e(c["slug"])}" data-label="Agregar"><span class="lbl">Agregar</span></button></div>'
             f'<a class="g-cta" href="{href}"><span class="g-cta-l">{svg_icon(PLAY_PATH)}Ver curso</span><span aria-hidden="true">›</span></a></div></article>')
 
@@ -449,14 +468,16 @@ def pack_html(b, by_slug):
     for sl in b["slugs"]:
         c = by_slug.get(sl)
         if c:
-            cop += float(c["price_cop"])
-            usd += float(c["price_usd"])
+            cop += list_or_price(c, "cop")
+            usd += list_or_price(c, "usd")
         icons += f'<span class="cat-ico mini">{course_icon(sl)}</span>'
     save_cop = max(0, cop - float(b["price_cop"]))
     save_usd = max(0, usd - float(b["price_usd"]))
     out = f'<article class="pack{" featured" if b["featured"] else ""}">'
     out += '<span class="badge-top">MEJOR PRECIO</span>' if b["featured"] else ""
-    out += f'<div class="pack-ico">{icons}</div><h3>{e(b["name"])}</h3><p class="pack-desc">{e(b["description"] or "")}</p>'
+    img = cover_url({"cover_path": b.get("image_path")}) if b.get("image_path") else ""
+    media = f'<img class="pack-img" src="{e(img)}" alt="{e(b["name"])}" loading="lazy" width="640" height="360">' if img else f'<div class="pack-ico">{icons}</div>'
+    out += f'{media}<h3>{e(b["name"])}</h3><p class="pack-desc">{e(b["description"] or "")}</p>'
     out += f'<div class="pack-price">{price_el(b["price_cop"], b["price_usd"], "b")}' + (price_el(cop, usd, "s") if cop > float(b["price_cop"]) else "") + "</div>"
     out += f'<p class="pack-save">Ahorras {price_el(save_cop, save_usd)}</p>' if save_cop > 0 else ""
     out += f'<button type="button" class="btn btn-block" data-add-pack="{e(",".join(b["slugs"]))}">Agregar al carrito</button></article>'
@@ -500,7 +521,7 @@ def course_body(c, others):
            + '<ul class="ticks"><li>Paso a paso, sin experiencia previa</li><li>Ejercicio práctico al final de cada lección</li><li>Acceso inmediato tras el pago · Garantía de 7 días</li></ul></div>'
            f'<aside class="buybox"><div class="buybox-cover {"has-cover" if cover else e(c["grad"])}">{cover_html}</div>'
            '<div class="currency small" role="group" aria-label="Moneda"><button type="button" data-cur="cop" aria-pressed="true">COP Pesos</button><button type="button" data-cur="usd" aria-pressed="false">US$ Dólares</button></div>'
-           f'<div class="buybox-price">{price_el(c["price_cop"], c["price_usd"], "b")}<span>Acceso de por vida</span></div>{buy}'
+           f'<div class="buybox-price">{price_block(c, "b", "price")}<span>Acceso de por vida</span></div>{buy}'
            '<p class="buybox-deal">Con 2 o más guías pagas menos por cada una. <a href="/#paquetes">Ver paquetes</a></p>'
            '<ul class="buybox-list"><li>Guía completa en PDF</li><li>Plantillas y ejercicios extra</li><li>Certificado digital</li><li>Garantía de 7 días</li></ul></aside></div></section>'
            '<section class="section"><div class="wrap two-col"><div>'
@@ -613,13 +634,17 @@ def build_index():
     if faq:
         ld_graph.append({"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq]})
     desc = f"Aprende dibujo, pintura, jabones y velas artesanales desde cero con guías en PDF paso a paso. Desde {money(min_cop, 'cop')}, acceso inmediato y garantía de 7 días."
+    hero = read("hero.html")
+    if cat["ok"]:
+        min_usd = min(float(c["price_usd"]) for c in cat["courses"])
+        hero = hero.replace("Desde COP $24.000", "Desde " + money(min_cop, "cop")).replace("Desde US$6", "Desde " + money(min_usd, "usd"))
     kws = ("guías de dibujo, guías de pintura, jabones artesanales, velas artesanales, curso de dibujo desde cero, aprender a pintar, "
            "cómo hacer jabones, cómo hacer velas, guías en PDF, academia online, manualidades, emprender con manualidades, Taller Creativo")
     body = f"""{head("Guías de dibujo, pintura, jabones y velas | Taller Creativo", desc, "/", ld_script({"@context": "https://schema.org", "@graph": ld_graph}), None, kws)}
 {header(True)}
 <main id="inicio">
 
-{read('hero.html')}
+{hero}
 {read('medida.html')}
 {read('ps.html')}
   <!-- CATALOGO -->

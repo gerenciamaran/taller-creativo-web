@@ -721,3 +721,15 @@ textarea.fin { resize: vertical; }
 .g-meta i { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--btn); color: #fff; }
 .g-meta i svg { width: 11px; height: 11px; margin-left: 1px; }
 .guia .g-short { margin-bottom: 12px; }
+
+/* ---- Precio normal tachado y promoción; imagen del paquete ---- */
+.price-wrap { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.price-old { color: var(--ink-soft); font-size: .85rem; font-weight: 500; text-decoration: line-through; }
+.price-old:empty { display: none; }
+.guia .price-wrap { flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.15; }
+.guia .price-old { order: -1; font-size: .78rem; }
+.buybox-price .price-old { font-size: 1rem; }
+.pack-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 16px; margin: 0 0 14px; background: var(--sand); }
+.ac-thumb-pack { width: 100%; max-width: 280px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; display: block; background: var(--sand); }
+.trow .tier-hint { font-size: .85rem; color: var(--ink-soft); }
+.pack .pack-img { height: auto; }

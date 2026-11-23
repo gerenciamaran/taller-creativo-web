@@ -86,8 +86,13 @@
     var r = priceOf(keys, currency);
     if (r.bundle) return "¡Paquete con descuento aplicado!";
     var next = TC.nextTier(n);
-    if (n === 1) return next ? "Suma otra guía y pagas menos por cada una." : "";
-    if (next) return "Suma " + (next.min_qty - n) + " guía" + (next.min_qty - n > 1 ? "s" : "") + " más y el descuento sube a " + Number(next.percent_off) + " %.";
+    if (next) {
+      // «Suma otra guía y cada una te queda en $39.000»: precio por guía con el siguiente descuento.
+      var add = next.min_qty - n, raw = (r.base / n) * (1 - Number(next.percent_off) / 100);
+      var unit = currency === "usd" ? Math.round(raw * 2) / 2 : Math.round(raw / 100) * 100;
+      return "Suma " + (add === 1 ? "otra guía" : add + " guías más") + " y cada una te queda en " + money(unit) + ".";
+    }
+    if (n === 1) return "";
     return "¡Descuento máximo aplicado: el mejor precio!";
   }
 
@@ -166,7 +171,9 @@
 
     var pr = priceOf(keys, currency);
     var total = pr.total;
-    var saving = pr.saving;
+    // El ahorro se cuenta contra el precio normal (tachado), igual que en las tarjetas de los paquetes.
+    var listSum = keys.reduce(function (t, k) { var c = TC.course(k); return t + (c ? (TC.listOf(c, currency) || TC.unit(c, currency)) : 0); }, 0);
+    var saving = Math.max(pr.saving, listSum - total);
     drawer.querySelector(".cart-total").textContent = money(total);
     var sv = drawer.querySelector(".cart-saving");
     sv.textContent = saving > 0 ? "Ahorras " + money(saving) : "";

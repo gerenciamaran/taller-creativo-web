@@ -99,7 +99,7 @@
   // Cursos que el usuario puede ver: los suyos y, si es administrador, todos (también los borradores).
   function loadCourses() {
     return sb.from("courses")
-      .select("slug,title,category,grad,cover_path,status,sort_order,price_cop,price_usd,short,promise,who,bullets,learn,extras,kit,course_modules(id,position,title,course_lessons(id,position,title,exercise))")
+      .select("slug,title,category,grad,cover_path,status,sort_order,price_cop,price_usd,list_price_cop,list_price_usd,short,promise,who,bullets,learn,extras,kit,course_modules(id,position,title,course_lessons(id,position,title,exercise))")
       .order("sort_order").then(function (r) {
         if (r.error) throw r.error;
         COURSES = {};
