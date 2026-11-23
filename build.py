@@ -419,17 +419,28 @@ def course_icon(slug):
     return ICON.get(slug) or '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4l3.5 7.5L28 12.6l-6 5.7 1.5 8.4L16 22.6 8.5 26.7 10 18.3 4 12.6l8.5-1.1z" fill="#FFC93C"/></svg>'
 
 
+CAT_PATHS = {"g-draw": "M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.4-1.9-.4-1 .3-2.1 1.4-2.1H17a4 4 0 0 0 4-4c0-5-4-10-9-10zM7.5 12a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm3-4a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6z", "g-paint": "M20.7 3.3a2 2 0 0 0-2.8 0L9 12.2l2.8 2.8 8.9-8.9a2 2 0 0 0 0-2.8zM7.5 13.5C5.6 13.5 4 15 4 17c0 1.4-.8 2.5-2 3 3.5 1 8 .5 8-3.5a3.5 3.5 0 0 0-2.5-3z", "g-soap": "M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.4 3.6L12 11.5 5.6 7.9 12 4.3zM5 9.6l6 3.4v6.4l-6-3.3V9.6zm8 9.8V13l6-3.4v6.5l-6 3.3z", "g-candle": "M12 2c1.2 1.8 1.8 3 1.8 4.2A1.8 1.8 0 0 1 12 8a1.8 1.8 0 0 1-1.8-1.8C10.2 5 10.8 3.8 12 2zM8 10h8a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a1 1 0 0 1 1-1z"}
+PLAY_PATH = "M8 5v14l11-7z"
+
+
+def svg_icon(d):
+    return f'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{d}"/></svg>'
+
+
 def card_html(c):
+    """Ficha del catálogo (misma estructura que courseCard() en js/catalog.js)."""
     href = f"/guias/{c['slug']}"
     cover = cover_url(c)
     inner = (f'<img src="{e(cover)}" alt="Portada de la guía {e(c["title"])}" loading="lazy" width="960" height="504">' if cover else course_icon(c["slug"]))
-    top = f'<a class="guia-top {"has-cover" if cover else e(c["grad"])}" href="{href}" aria-label="Ver {e(c["title"])}">{inner}</a>'
-    lis = "".join(f"<li>{e(b)}</li>" for b in (c.get("bullets") or []))
-    return (f'<article class="guia">{top}<div class="guia-body"><span class="tag">{c["n_mod"]} módulos · {c["n_les"]} lecciones</span>'
-            f'<h3><a href="{href}">{e(c["title"])}</a></h3><p>{e(c["short"] or "")}</p><ul>{lis}</ul>'
+    cat_icon = svg_icon(CAT_PATHS.get(c["grad"], CAT_PATHS["g-draw"]))
+    top = (f'<a class="guia-top {"has-cover" if cover else e(c["grad"])}" href="{href}" aria-label="Ver {e(c["title"])}">{inner}'
+           f'<span class="g-play">{svg_icon(PLAY_PATH)}</span><span class="g-cat">{cat_icon}{e(c.get("category") or "Guía")}</span></a>')
+    return (f'<article class="guia {e(str(c["grad"]).replace("g-", "gc-"))}">{top}'
+            f'<div class="guia-body"><h3><a href="{href}">{e(c["title"])}</a></h3><p class="g-short">{e(c["short"] or "")}</p>'
+            f'<p class="g-meta"><i>{svg_icon(PLAY_PATH)}</i>{c["n_mod"]} módulos · {c["n_les"]} lecciones</p>'
             f'<div class="guia-foot">{price_el(c["price_cop"], c["price_usd"], "b", "price big")}'
-            f'<div class="guia-actions"><a class="btn btn-sm btn-ghost" href="{href}">Ver guía</a>'
-            f'<button type="button" class="btn btn-sm" data-add="{e(c["slug"])}" data-label="Agregar"><span class="lbl">Agregar</span></button></div></div></div></article>')
+            f'<button type="button" class="btn btn-sm btn-ghost" data-add="{e(c["slug"])}" data-label="Agregar"><span class="lbl">Agregar</span></button></div>'
+            f'<a class="g-cta" href="{href}"><span class="g-cta-l">{svg_icon(PLAY_PATH)}Ver curso</span><span aria-hidden="true">›</span></a></div></article>')
 
 
 def pack_html(b, by_slug):

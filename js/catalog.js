@@ -126,15 +126,22 @@
     var inner = cover ? '<img src="' + esc(cover) + '" alt="Portada de la guía ' + esc(c.title) + '" loading="lazy" width="960" height="504">' : TC.icon(c.slug);
     return '<a class="' + cls + (cover ? " has-cover" : " " + esc(c.grad)) + '" href="' + href + '" aria-label="' + esc(label) + '">' + inner + "</a>";
   }
+  // Íconos: etiqueta de categoría sobre la portada (según el color del curso) y botón de reproducir.
+  var CAT_ICON = { "g-draw": "M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.9 1.4-1.9-.4-1 .3-2.1 1.4-2.1H17a4 4 0 0 0 4-4c0-5-4-10-9-10zM7.5 12a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm3-4a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6z", "g-paint": "M20.7 3.3a2 2 0 0 0-2.8 0L9 12.2l2.8 2.8 8.9-8.9a2 2 0 0 0 0-2.8zM7.5 13.5C5.6 13.5 4 15 4 17c0 1.4-.8 2.5-2 3 3.5 1 8 .5 8-3.5a3.5 3.5 0 0 0-2.5-3z", "g-soap": "M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.4 3.6L12 11.5 5.6 7.9 12 4.3zM5 9.6l6 3.4v6.4l-6-3.3V9.6zm8 9.8V13l6-3.4v6.5l-6 3.3z", "g-candle": "M12 2c1.2 1.8 1.8 3 1.8 4.2A1.8 1.8 0 0 1 12 8a1.8 1.8 0 0 1-1.8-1.8C10.2 5 10.8 3.8 12 2zM8 10h8a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a1 1 0 0 1 1-1z" };
+  var PLAY = "M8 5v14l11-7z";
+  function svg(d) { return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + d + '"/></svg>'; }
   function courseCard(c) {
     var href = "/guias/" + encodeURIComponent(c.slug);
-    return '<article class="guia">' + topHtml(c, "guia-top", href, "Ver " + c.title) +
-      '<div class="guia-body"><span class="tag">' + c.n_mod + " módulos · " + c.n_les + " lecciones</span>" +
-      '<h3><a href="' + href + '">' + esc(c.title) + "</a></h3><p>" + esc(c.short) + "</p>" +
-      "<ul>" + (c.bullets || []).map(function (b) { return "<li>" + esc(b) + "</li>"; }).join("") + "</ul>" +
+    var cover = TC.coverUrl(c);
+    var inner = cover ? '<img src="' + esc(cover) + '" alt="Portada de la guía ' + esc(c.title) + '" loading="lazy" width="960" height="504">' : TC.icon(c.slug);
+    var top = '<a class="guia-top ' + (cover ? "has-cover" : esc(c.grad)) + '" href="' + href + '" aria-label="Ver ' + esc(c.title) + '">' + inner +
+      '<span class="g-play">' + svg(PLAY) + '</span><span class="g-cat">' + svg(CAT_ICON[c.grad] || CAT_ICON["g-draw"]) + esc(c.category || "Guía") + "</span></a>";
+    return '<article class="guia ' + esc(String(c.grad).replace("g-", "gc-")) + '">' + top +
+      '<div class="guia-body"><h3><a href="' + href + '">' + esc(c.title) + '</a></h3><p class="g-short">' + esc(c.short) + "</p>" +
+      '<p class="g-meta"><i>' + svg(PLAY) + "</i>" + c.n_mod + " módulos · " + c.n_les + " lecciones</p>" +
       '<div class="guia-foot">' + TC.priceEl(c.price_cop, c.price_usd, "b", "price big") +
-      '<div class="guia-actions"><a class="btn btn-sm btn-ghost" href="' + href + '">Ver guía</a>' +
-      '<button type="button" class="btn btn-sm" data-add="' + esc(c.slug) + '" data-label="Agregar"><span class="lbl">Agregar</span></button></div></div></div></article>';
+      '<button type="button" class="btn btn-sm btn-ghost" data-add="' + esc(c.slug) + '" data-label="Agregar"><span class="lbl">Agregar</span></button></div>' +
+      '<a class="g-cta" href="' + href + '"><span class="g-cta-l">' + svg(PLAY) + "Ver curso</span><span aria-hidden=\"true\">›</span></a></div></article>";
   }
   function packCard(b) {
     var cop = 0, usd = 0, icons = "";
