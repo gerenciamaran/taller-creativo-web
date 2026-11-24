@@ -669,6 +669,8 @@ textarea.fin { resize: vertical; }
 .cart-email-label { display: block; font-weight: 600; font-size: .85rem; margin: 6px 0 4px; }
 .cart-email { width: 100%; padding: 11px 12px; border: 2px solid var(--line); border-radius: 12px; font: inherit; margin-bottom: 10px; background: #fff; }
 .cart-email:focus { outline: 3px solid var(--teal); outline-offset: 1px; }
+.cart-idrow { display: grid; grid-template-columns: 9.5rem 1fr; gap: 8px; }
+.cart-idrow .cart-email { min-width: 0; }
 .cart-note.err { color: #B3261E; font-weight: 600; }
 
 /* ---- Fichas del catálogo con más gancho comercial (portada con play, etiqueta de color, viñetas con íconos, botón grande) ---- */

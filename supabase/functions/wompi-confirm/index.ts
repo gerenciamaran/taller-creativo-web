@@ -47,6 +47,11 @@ Deno.serve(async (req) => {
     if (ok) {
       const { error } = await sb.rpc("fulfill_order", { p_ref: o.reference, p_tx: ok.id, p_amount: Number(o.amount_cents), p_currency: o.currency });
       if (error) { console.error("fulfill_order", o.reference, error.message); return "PENDING"; }
+      // Factura electrónica en Alegra (en segundo plano; si falla, pg_cron la reintenta cada 10 minutos).
+      const inv = fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/alegra-invoice`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference: o.reference }),
+      }).catch((e) => console.error("alegra-invoice", o.reference, String(e)));
+      try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(inv); } catch (_) { /* sin waitUntil */ }
       return "APPROVED";
     }
     // Sin pago aprobado: si Wompi todavía procesa alguna, sigue pendiente; si todas fallaron, se refleja el último fallo.

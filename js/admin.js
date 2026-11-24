@@ -482,7 +482,7 @@
   function renderSales() {
     var host = $("tab-ventas");
     host.textContent = "Cargando…";
-    sb.from("orders").select("reference,email,slugs,amount_cents,status,created_at,paid_at,env").order("created_at", { ascending: false }).limit(100).then(function (r) {
+    sb.from("orders").select("reference,email,slugs,amount_cents,status,created_at,paid_at,env,buyer_name,buyer_id_type,buyer_id_number,invoice_status,invoice_number,invoice_error,invoice_attempts").order("created_at", { ascending: false }).limit(100).then(function (r) {
       host.textContent = "";
       host.appendChild(el("div", { class: "panel-head" }, [
         el("div", {}, [el("h2", { text: "Ventas" }), el("p", { class: "muted", text: "Pagos hechos con Wompi (pesos). Los pedidos de prueba no suman al total." })]),
@@ -513,6 +513,29 @@
             });
           }));
         }
+        // Factura electrónica (Alegra): solo aplica a pedidos pagados en producción con datos del comprador.
+        var invLine = null;
+        if (paid && o.env === "production") {
+          var ist = o.invoice_status;
+          var invText = !o.buyer_id_number ? "Factura: sin datos del comprador (no se facturó)."
+            : ist === "ISSUED" ? "Factura emitida" + (o.invoice_number ? " " + o.invoice_number : "") + " a " + (o.buyer_name || "") + " (" + o.buyer_id_type + " " + o.buyer_id_number + ")."
+            : ist === "DRAFT" ? "Factura en BORRADOR en Alegra" + (o.invoice_number ? " (" + o.invoice_number + ")" : "") + ": revísala y envíala desde Alegra, o activa el envío a la DIAN."
+            : ist === "SENDING" ? "Factura: creándose…"
+            : ist === "REVIEW" ? "Factura: revisar a mano en Alegra (quedó a medias). " + (o.invoice_error || "")
+            : ist === "ERROR" ? "Factura con error (" + (o.invoice_attempts || 0) + " intentos): " + (o.invoice_error || "")
+            : "Factura: pendiente.";
+          invLine = el("p", { class: "muted", text: invText });
+          if (o.buyer_id_number && (ist === "ERROR" || !ist) && (o.invoice_attempts || 0) < 5) {
+            actions.push(btn("Facturar ahora", "btn-ghost", function (ev) {
+              var b = ev.currentTarget; b.disabled = true; b.textContent = "Facturando…";
+              TC.fn("alegra-invoice", { reference: o.reference }).then(function (res) {
+                var s = res.data && res.data.status;
+                setMsg(s === "ISSUED" ? "Factura emitida." : s === "DRAFT" ? "Factura creada en borrador en Alegra." : "Resultado: " + (s || "sin respuesta") + ". Mira el detalle en el pedido.", s === "ISSUED" || s === "DRAFT" ? "ok" : "err");
+                renderSales();
+              });
+            }));
+          }
+        }
         host.appendChild(el("article", { class: "ac" }, [
           el("div", { class: "ac-body" }, [
             el("div", { class: "ac-top" }, [
@@ -520,6 +543,7 @@
               el("span", { class: "chip2 " + (paid ? "pub" : "draft"), text: (STATUS_LABEL[o.status] || o.status) + (o.env === "production" ? "" : " · prueba") })
             ]),
             el("p", { class: "muted", text: when + " · " + o.email + " · " + money(o.amount_cents / 100) + " COP · " + o.reference }),
+            invLine,
             actions.length ? el("div", { class: "vactions" }, actions) : null
           ])
         ]));

@@ -49,19 +49,34 @@
   // El precio lo calcula y firma la base de datos (create_order); aquí solo se arma el enlace al checkout de Wompi.
   // Se muestra si el administrador lo dejó activo (checkout_enabled). En dólares se sigue pidiendo por WhatsApp.
   var SITE_ORIGIN = "https://tallercreativo.com.co";
-  var checkout = { enabled: false, busy: false };
+  var checkout = { enabled: false, busy: false, invoice: false };
   var buyerEmail = "";
   try { buyerEmail = localStorage.getItem("tc_email") || ""; } catch (e) {}
   function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  // Datos para la factura electrónica (solo si el administrador activó la facturación con Alegra).
+  var buyer = { name: "", idt: "CC", idn: "" };
+  try { var bsaved = JSON.parse(localStorage.getItem("tc_buyer") || "{}"); buyer.name = String(bsaved.name || ""); buyer.idt = String(bsaved.idt || "CC"); buyer.idn = String(bsaved.idn || ""); } catch (e) {}
   if (window.TC && TC.rpc) TC.rpc("checkout_enabled").then(function (r) { checkout.enabled = !!(r.ok && r.data === true); render(); });
+  if (window.TC && TC.rpc) TC.rpc("invoicing_enabled").then(function (r) { checkout.invoice = !!(r.ok && r.data === true); render(); });
 
   function startCheckout(keys, input, note, btn) {
     var em = (input.value || "").trim().toLowerCase();
     if (!validEmail(em)) { note.textContent = "Escribe un correo válido: ahí recibirás el acceso a tus guías."; note.className = "cart-note err"; input.focus(); return; }
+    var params = { p_email: em, p_slugs: keys };
+    if (checkout.invoice) {
+      var nm = (buyer.name || "").replace(/\s+/g, " ").trim(), dn = (buyer.idn || "").replace(/[\s.\-]/g, "");
+      if (nm.length < 3) { note.textContent = "Escribe tu nombre completo: así sale en la factura."; note.className = "cart-note err"; return; }
+      if (buyer.idt === "PP" ? !/^[A-Za-z0-9]{5,20}$/.test(dn) : !/^[0-9]{5,12}$/.test(dn)) {
+        note.textContent = buyer.idt === "PP" ? "Escribe el número de tu pasaporte." : "Escribe tu número de documento solo con números, sin puntos ni dígito de verificación.";
+        note.className = "cart-note err"; return;
+      }
+      params.p_name = nm; params.p_id_type = buyer.idt; params.p_id_number = dn;
+      try { localStorage.setItem("tc_buyer", JSON.stringify({ name: nm, idt: buyer.idt, idn: dn })); } catch (e) {}
+    }
     buyerEmail = em;
     try { localStorage.setItem("tc_email", em); } catch (e) {}
     checkout.busy = true; btn.disabled = true; btn.textContent = "Preparando el pago…"; note.className = "cart-note";
-    TC.rpc("create_order", { p_email: em, p_slugs: keys }).then(function (r) {
+    TC.rpc("create_order", params).then(function (r) {
       if (!r.ok || !r.data || !r.data.reference) throw new Error((r.data && r.data.message) || "No pudimos preparar el pago.");
       var d = r.data;
       location.href = "https://checkout.wompi.co/p/?public-key=" + encodeURIComponent(d.public_key) + "&currency=" + encodeURIComponent(d.currency) +
@@ -200,8 +215,31 @@
       pay.textContent = "Pagar con tarjeta, PSE o Nequi · " + money(total, "cop");
       pay.disabled = checkout.busy;
       pay.addEventListener("click", function () { startCheckout(keys, inp, drawer.querySelector(".cart-note"), pay); });
-      box.appendChild(lab); box.appendChild(inp); box.appendChild(pay);
-      payNote = "Pago seguro con Wompi. Recibes tu guía apenas se confirma el pago, en el correo que escribas.";
+      box.appendChild(lab); box.appendChild(inp);
+      if (checkout.invoice) {
+        var l2 = document.createElement("label");
+        l2.className = "cart-email-label"; l2.textContent = "Datos para tu factura electrónica";
+        var nin = document.createElement("input");
+        nin.type = "text"; nin.className = "cart-email"; nin.placeholder = "Nombre completo o razón social"; nin.autocomplete = "name"; nin.maxLength = 120;
+        nin.value = buyer.name;
+        nin.addEventListener("input", function () { buyer.name = nin.value; });
+        var row = document.createElement("div");
+        row.className = "cart-idrow";
+        var sel = document.createElement("select");
+        sel.className = "cart-email"; sel.setAttribute("aria-label", "Tipo de documento");
+        [["CC", "Cédula"], ["CE", "Cédula extranjería"], ["NIT", "NIT"], ["PP", "Pasaporte"]].forEach(function (o) {
+          var op = document.createElement("option"); op.value = o[0]; op.textContent = o[1]; if (o[0] === buyer.idt) op.selected = true; sel.appendChild(op);
+        });
+        sel.addEventListener("change", function () { buyer.idt = sel.value; });
+        var idin = document.createElement("input");
+        idin.type = "text"; idin.className = "cart-email"; idin.placeholder = "Número (sin puntos)"; idin.inputMode = "numeric"; idin.maxLength = 20;
+        idin.value = buyer.idn;
+        idin.addEventListener("input", function () { buyer.idn = idin.value; });
+        row.appendChild(sel); row.appendChild(idin);
+        box.appendChild(l2); box.appendChild(nin); box.appendChild(row);
+      }
+      box.appendChild(pay);
+      payNote = "Pago seguro con Wompi. Recibes tu guía apenas se confirma el pago, en el correo que escribas." + (checkout.invoice ? " Tu factura electrónica se genera a tu nombre con estos datos." : "");
     }
     PROVIDERS.forEach(function (pv) {
       var url = sku && CONFIG.links[pv.id] && CONFIG.links[pv.id][sku];
